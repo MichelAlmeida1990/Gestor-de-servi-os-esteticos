@@ -198,8 +198,19 @@ export default function AgendaPage() {
 
       if (appointmentsRes.ok) {
         const data = await appointmentsRes.json();
-        console.log('📋 Agendamentos recebidos:', data.appointments?.length || 0, data.appointments);
+        console.log('📋 Agendamentos recebidos do backend:', data.appointments?.length || 0);
+        if (data.appointments && data.appointments.length > 0) {
+          console.log('📋 Detalhes dos agendamentos:', data.appointments.map((apt: Appointment) => ({
+            id: apt.id,
+            startTime: apt.startTime,
+            startTimeLocal: new Date(apt.startTime).toLocaleString('pt-BR'),
+            startTimeDate: new Date(apt.startTime).toLocaleDateString('pt-BR'),
+            client: apt.client.name,
+          })));
+        }
         setAppointments(data.appointments || []);
+      } else {
+        console.error('❌ Erro ao buscar agendamentos:', appointmentsRes.status, appointmentsRes.statusText);
       }
       if (clientsRes.ok) {
         const data = await clientsRes.json();
@@ -542,6 +553,17 @@ export default function AgendaPage() {
                                aptMonth === selectedMonth && 
                                aptDay === selectedDay && 
                                aptHour === hour;
+      
+      // Log detalhado para debug
+      if (aptYear === selectedYear && aptMonth === selectedMonth && aptDay === selectedDay) {
+        console.log(`🔍 Agendamento encontrado no dia ${selectedDay}/${selectedMonth + 1}/${selectedYear}, hora ${aptHour}, filtrado para ${hour}:`, {
+          aptId: apt.id,
+          aptHour,
+          filterHour: hour,
+          matches: isSameDayAndHour,
+          aptDateLocal: aptDate.toLocaleString('pt-BR'),
+        });
+      }
       
       return isSameDayAndHour;
     });
