@@ -404,9 +404,24 @@ export default function AgendaPage() {
 
   const getAppointmentsForHour = (hour: number) => {
     // Filtrar agendamentos que estão na data selecionada E na hora especificada
+    // Normalizar a data selecionada para comparação
+    const selectedDay = selectedDate.getDate();
+    const selectedMonth = selectedDate.getMonth();
+    const selectedYear = selectedDate.getFullYear();
+    
     return appointments.filter((apt) => {
       const aptDate = new Date(apt.startTime);
-      return isSameDay(aptDate, selectedDate) && aptDate.getHours() === hour;
+      // Comparar dia, mês e ano usando valores locais
+      const aptDay = aptDate.getDate();
+      const aptMonth = aptDate.getMonth();
+      const aptYear = aptDate.getFullYear();
+      const aptHour = aptDate.getHours();
+      
+      // Verificar se está no mesmo dia E mesma hora
+      return aptYear === selectedYear && 
+             aptMonth === selectedMonth && 
+             aptDay === selectedDay && 
+             aptHour === hour;
     });
   };
 
