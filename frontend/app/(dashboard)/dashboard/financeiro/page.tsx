@@ -32,6 +32,7 @@ interface Transaction {
 interface Professional {
   id: string;
   name: string;
+  isActive?: boolean;
 }
 
 interface Summary {
