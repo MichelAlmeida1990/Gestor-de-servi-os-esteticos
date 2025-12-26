@@ -56,8 +56,11 @@ async function buildServer() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Security
-  await server.register(helmet);
+  // Security - Configurar Helmet para não bloquear CORS
+  await server.register(helmet, {
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+  });
 
   // JWT
   await server.register(jwt, {
