@@ -3,21 +3,6 @@ import { execSync } from 'child_process';
 
 const start = async () => {
   try {
-    // Executar migrações do Prisma automaticamente na primeira inicialização
-    if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE !== 'false') {
-      try {
-        console.log('🔄 Executando migrações do banco de dados...');
-        execSync('npx prisma db push --accept-data-loss', { 
-          stdio: 'inherit',
-          cwd: process.cwd(),
-        });
-        console.log('✅ Migrações executadas com sucesso!');
-      } catch (migrateError) {
-        console.warn('⚠️ Aviso: Erro ao executar migrações automáticas:', migrateError);
-        console.warn('⚠️ Execute manualmente: npx prisma db push');
-      }
-    }
-
     const server = await buildServer();
     
     // Porta do ambiente ou padrão 3001 (desenvolvimento)

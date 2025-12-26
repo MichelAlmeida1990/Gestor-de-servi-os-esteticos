@@ -8,7 +8,10 @@
 ```env
 DATABASE_URL=postgresql://user:password@hostname:5432/dbname
 ```
-⚠️ Use a **Internal Database URL** do PostgreSQL no Render
+⚠️ Use a **Connection String** do banco escolhido:
+- **Neon**: Connection string completa (com `?sslmode=require`)
+- **Railway**: DATABASE_URL das variáveis
+- **ElephantSQL**: URL da instância
 
 ```env
 JWT_SECRET=sua-chave-secreta-super-forte-aqui

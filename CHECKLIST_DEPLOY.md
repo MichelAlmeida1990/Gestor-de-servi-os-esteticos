@@ -11,13 +11,24 @@ Use este checklist para garantir que tudo está configurado corretamente.
 
 ---
 
-## 🗄️ RENDER - BANCO DE DADOS
+## 🗄️ BANCO DE DADOS (Neon/Railway/ElephantSQL)
 
-- [ ] PostgreSQL criado
-- [ ] Nome: `beautyflow-db`
-- [ ] Plan: Free
-- [ ] Status: "Available"
-- [ ] **Internal Database URL copiada** ⚠️
+⚠️ **Render não tem PostgreSQL gratuito!** Escolha uma opção:
+
+### Opção A: Neon
+- [ ] Conta criada no Neon
+- [ ] Projeto criado: `beautyflow`
+- [ ] **Connection String copiada** ⚠️
+
+### Opção B: Railway
+- [ ] Conta criada no Railway
+- [ ] PostgreSQL adicionado
+- [ ] **DATABASE_URL copiada** ⚠️
+
+### Opção C: ElephantSQL
+- [ ] Conta criada no ElephantSQL
+- [ ] Instância criada (Tiny Turtle Free)
+- [ ] **URL copiada** ⚠️
 
 ---
 
@@ -33,7 +44,7 @@ Use este checklist para garantir que tudo está configurado corretamente.
 - [ ] Plan: Free
 
 ### Variáveis de Ambiente
-- [ ] `DATABASE_URL` = [Internal Database URL]
+- [ ] `DATABASE_URL` = [Connection String do banco escolhido]
 - [ ] `JWT_SECRET` = [chave secreta forte]
 - [ ] `NODE_ENV` = `production`
 - [ ] `FRONTEND_URL` = [será atualizado depois]

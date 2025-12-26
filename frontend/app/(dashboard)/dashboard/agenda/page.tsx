@@ -16,6 +16,7 @@ import {
 import { Calendar, Clock, User, Sparkles, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, CheckCircle2, BadgeDollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { API_URL } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Appointment {
   id: string;
@@ -126,6 +127,10 @@ export default function AgendaPage() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'day' | 'month'>('day');
+  const [monthAppointments, setMonthAppointments] = useState<Appointment[]>([]);
+  const [monthCalendarOpen, setMonthCalendarOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [formData, setFormData] = useState({
     clientId: '',
     serviceId: '',
@@ -140,17 +145,27 @@ export default function AgendaPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedProfessionalId]);
+
+  useEffect(() => {
+    if (activeTab === 'month' || monthCalendarOpen) {
+      loadMonthData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth, selectedProfessionalId, monthCalendarOpen]);
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
 
-      // Criar datas no timezone local
-      const startDate = new Date(selectedDate);
-      startDate.setHours(0, 0, 0, 0);
+      // Normalizar a data selecionada para o início do dia no timezone local
+      const selectedDateNormalized = new Date(selectedDate);
+      selectedDateNormalized.setHours(0, 0, 0, 0);
       
-      const endDate = new Date(selectedDate);
+      const startDate = new Date(selectedDateNormalized);
+      const endDate = new Date(selectedDateNormalized);
       endDate.setHours(23, 59, 59, 999);
 
       // toISOString() converte para UTC automaticamente
@@ -159,6 +174,13 @@ export default function AgendaPage() {
       if (selectedProfessionalId) {
         appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
       }
+
+      console.log('📅 Carregando agendamentos para:', {
+        selectedDate: selectedDateNormalized.toLocaleDateString('pt-BR'),
+        startDateUTC: startDate.toISOString(),
+        endDateUTC: endDate.toISOString(),
+        url: appointmentsUrl
+      });
 
       const [appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
         fetch(appointmentsUrl, { headers: { Authorization: `Bearer ${token}` } }),
@@ -169,6 +191,7 @@ export default function AgendaPage() {
 
       if (appointmentsRes.ok) {
         const data = await appointmentsRes.json();
+        console.log('📋 Agendamentos recebidos:', data.appointments?.length || 0, data.appointments);
         setAppointments(data.appointments || []);
       }
       if (clientsRes.ok) {
@@ -188,6 +211,74 @@ export default function AgendaPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMonthData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Primeiro dia do mês
+      const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      firstDay.setHours(0, 0, 0, 0);
+      
+      // Último dia do mês
+      const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
+
+      let appointmentsUrl = `${API_URL}/appointments?startDate=${firstDay.toISOString()}&endDate=${lastDay.toISOString()}`;
+      if (selectedProfessionalId) {
+        appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
+      }
+
+      const response = await fetch(appointmentsUrl, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMonthAppointments(data.appointments || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar agendamentos do mês:', error);
+    }
+  };
+
+  const getAppointmentsForDay = (date: Date) => {
+    return monthAppointments.filter((apt) => {
+      const aptDate = new Date(apt.startTime);
+      return aptDate.getDate() === date.getDate() &&
+             aptDate.getMonth() === date.getMonth() &&
+             aptDate.getFullYear() === date.getFullYear();
+    });
+  };
+
+  const getDaysInMonth = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    
+    // Adicionar dias vazios no início
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Adicionar dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+
+  const navigateMonth = (direction: number) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + direction);
+    setCurrentMonth(newMonth);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -403,26 +494,39 @@ export default function AgendaPage() {
   };
 
   const getAppointmentsForHour = (hour: number) => {
-    // Filtrar agendamentos que estão na data selecionada E na hora especificada
-    // Normalizar a data selecionada para comparação
-    const selectedDay = selectedDate.getDate();
-    const selectedMonth = selectedDate.getMonth();
-    const selectedYear = selectedDate.getFullYear();
+    // Normalizar a data selecionada (sem hora, apenas dia)
+    const selectedDateNormalized = new Date(selectedDate);
+    selectedDateNormalized.setHours(0, 0, 0, 0);
     
-    return appointments.filter((apt) => {
+    const selectedDay = selectedDateNormalized.getDate();
+    const selectedMonth = selectedDateNormalized.getMonth();
+    const selectedYear = selectedDateNormalized.getFullYear();
+    
+    const filtered = appointments.filter((apt) => {
+      // Converter a data do agendamento (que vem em UTC/ISO) para timezone local
       const aptDate = new Date(apt.startTime);
-      // Comparar dia, mês e ano usando valores locais
+      
+      // Normalizar para comparar apenas dia, mês e ano (ignorar hora inicialmente)
       const aptDay = aptDate.getDate();
       const aptMonth = aptDate.getMonth();
       const aptYear = aptDate.getFullYear();
       const aptHour = aptDate.getHours();
       
       // Verificar se está no mesmo dia E mesma hora
-      return aptYear === selectedYear && 
-             aptMonth === selectedMonth && 
-             aptDay === selectedDay && 
-             aptHour === hour;
+      const isSameDayAndHour = aptYear === selectedYear && 
+                               aptMonth === selectedMonth && 
+                               aptDay === selectedDay && 
+                               aptHour === hour;
+      
+      return isSameDayAndHour;
     });
+    
+    // Log para debug (apenas se houver agendamentos)
+    if (filtered.length > 0) {
+      console.log(`⏰ Hora ${hour}:00 - ${filtered.length} agendamento(s)`, filtered);
+    }
+    
+    return filtered;
   };
 
   const navigateDate = (days: number) => {
@@ -780,6 +884,140 @@ export default function AgendaPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Tabs para Dia/Mês */}
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => {
+          const newTab = value as 'day' | 'month';
+          setActiveTab(newTab);
+          if (newTab === 'month') {
+            setMonthCalendarOpen(true);
+            setCurrentMonth(new Date(selectedDate));
+          }
+        }}
+      >
+        <div className="flex justify-center mb-4">
+          <TabsList className="bg-muted/50 border-2 border-primary/30">
+            <TabsTrigger value="day" className="px-6">
+              <Clock className="w-4 h-4 mr-2" />
+              Dia
+            </TabsTrigger>
+            <TabsTrigger value="month" className="px-6">
+              <Calendar className="w-4 h-4 mr-2" />
+              Mês
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Dialog do Calendário Mensal */}
+        <Dialog open={monthCalendarOpen} onOpenChange={(open) => {
+          setMonthCalendarOpen(open);
+          if (!open) {
+            setActiveTab('day');
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">
+                Agendamentos do Mês
+              </DialogTitle>
+              <DialogDescription>
+                Visualize todos os agendamentos do mês em um calendário completo
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Navegação do Mês */}
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigateMonth(-1)}
+                  className="h-10 w-10"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <h3 className="text-xl font-bold">
+                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </h3>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigateMonth(1)}
+                  className="h-10 w-10"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Calendário */}
+              <div className="border-2 border-primary/30 rounded-lg overflow-hidden">
+                {/* Cabeçalho dos dias da semana */}
+                <div className="grid grid-cols-7 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b-2 border-primary/20">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                    <div key={day} className="p-3 text-center font-bold text-sm border-r border-primary/20 last:border-r-0">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dias do mês */}
+                <div className="grid grid-cols-7">
+                  {getDaysInMonth().map((date, index) => {
+                    if (!date) {
+                      return <div key={index} className="min-h-[100px] border-r border-b border-primary/20 last:border-r-0" />;
+                    }
+
+                    const dayAppointments = getAppointmentsForDay(date);
+                    const isToday = isSameDay(date, new Date());
+                    const isSelected = isSameDay(date, selectedDate);
+
+                    return (
+                      <div
+                        key={index}
+                        className={`relative min-h-[100px] p-2 border-r border-b border-primary/20 last:border-r-0 ${
+                          isToday ? 'bg-primary/10' : ''
+                        } ${isSelected ? 'ring-2 ring-primary' : ''} hover:bg-primary/5 transition-colors`}
+                      >
+                        <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                          {date.getDate()}
+                        </div>
+                        <div 
+                          className="space-y-1 cursor-pointer"
+                          onClick={() => {
+                            setSelectedDate(date);
+                            setMonthCalendarOpen(false);
+                            setActiveTab('day');
+                          }}
+                        >
+                          {dayAppointments.slice(0, 2).map((apt) => {
+                            const statusColors = getStatusColor(apt.status);
+                            return (
+                              <div
+                                key={apt.id}
+                                className={`text-[10px] p-1 rounded ${statusColors.bg} ${statusColors.text} truncate hover:opacity-80 border ${statusColors.border}`}
+                                title={`${formatTime(apt.startTime)} - ${apt.client.name} - ${apt.service.name}`}
+                              >
+                                {formatTime(apt.startTime)} {apt.client.name.split(' ')[0]}
+                              </div>
+                            );
+                          })}
+                          {dayAppointments.length > 2 && (
+                            <div className="text-[10px] text-muted-foreground font-semibold hover:text-primary">
+                              +{dayAppointments.length - 2} mais
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <TabsContent value="day" className="space-y-4">
       {/* Navegação de Data */}
       <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/80 shadow-lg">
         <CardContent className="p-4 md:p-6">
@@ -864,7 +1102,7 @@ export default function AgendaPage() {
                 return (
                   <div
                     key={hour}
-                    className={`relative min-h-[80px] md:min-h-[100px] grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-5 transition-all ${isPast ? 'opacity-60' : ''} ${isCurrent ? 'bg-primary/5' : 'hover:bg-muted/10'}`}
+                    className={`relative min-h-[80px] md:min-h-[100px] grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-5 ${isPast ? 'opacity-60' : ''} ${isCurrent ? 'bg-primary/5' : ''}`}
                   >
                     <div className="col-span-2 sm:col-span-1 flex items-center">
                       <div className={`text-sm md:text-base lg:text-lg font-bold ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -997,6 +1235,8 @@ export default function AgendaPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

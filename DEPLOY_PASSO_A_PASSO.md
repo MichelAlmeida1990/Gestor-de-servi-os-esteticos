@@ -7,16 +7,28 @@ Fazer deploy completo do BeautyFlow usando serviços 100% gratuitos.
 
 ## ⚡ INÍCIO RÁPIDO
 
-### 1️⃣ Render - Backend (15 minutos)
+### 1️⃣ Banco de Dados PostgreSQL (5 minutos)
 
-#### A. Criar Banco de Dados
-1. Acesse: https://dashboard.render.com
-2. **New +** → **PostgreSQL**
-3. Nome: `beautyflow-db`
-4. Plan: **Free**
-5. **Create Database**
-6. ⏳ Aguarde 2 minutos
-7. **COPIE a Internal Database URL** (ex: `postgresql://user:pass@host:5432/db`)
+⚠️ **Render não tem PostgreSQL gratuito mais!** Escolha uma opção:
+
+#### OPÇÃO A: Neon (Recomendado)
+1. Acesse: https://neon.tech
+2. **Sign Up** com GitHub
+3. **Create Project** → Nome: `beautyflow`
+4. **COPIE a Connection String** (ex: `postgresql://user:pass@host/db?sslmode=require`)
+
+#### OPÇÃO B: Railway
+1. Acesse: https://railway.app
+2. **Login** com GitHub
+3. **New Project** → **Add PostgreSQL**
+4. **COPIE a DATABASE_URL** das variáveis
+
+#### OPÇÃO C: ElephantSQL
+1. Acesse: https://www.elephantsql.com
+2. **Sign Up** → **Create Instance** → **Tiny Turtle (Free)**
+3. **COPIE a URL** da instância
+
+### 2️⃣ Render - Backend (10 minutos)
 
 #### B. Criar Web Service
 1. **New +** → **Web Service**
@@ -30,7 +42,7 @@ Fazer deploy completo do BeautyFlow usando serviços 100% gratuitos.
 
 4. Variáveis de Ambiente:
    ```
-   DATABASE_URL = [Cole a Internal Database URL]
+   DATABASE_URL = [Cole a Connection String do Neon/Railway/ElephantSQL]
    JWT_SECRET = sua-chave-secreta-aqui-123456
    NODE_ENV = production
    FRONTEND_URL = https://seu-app.vercel.app
@@ -52,7 +64,7 @@ Fazer deploy completo do BeautyFlow usando serviços 100% gratuitos.
 
 ---
 
-### 2️⃣ Vercel - Frontend (10 minutos)
+### 3️⃣ Vercel - Frontend (10 minutos)
 
 #### A. Criar Projeto
 1. Acesse: https://vercel.com
