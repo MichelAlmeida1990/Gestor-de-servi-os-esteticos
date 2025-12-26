@@ -1,0 +1,23 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
+
+export const metadata: Metadata = {
+  title: "BeautyFlow - Gestão para Salões",
+  description: "Sistema completo de gestão para salões de beleza e manicure",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="pt-BR">
+      <body className="antialiased">
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,367 @@
+// BeautyFlow - Schema do Banco de Dados
+// Sistema de gestão para salões de beleza e manicure
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Usuário do sistema (dono/gerente do salão)
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  phone         String?
+  role          UserRole @default(OWNER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  establishments Establishment[]
+  
+  @@map("users")
+}
+
+// Estabelecimento (salão)
+model Establishment {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String?
+  email         String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  // Relacionamentos
+  clients       Client[]
+  professionals Professional[]
+  services      Service[]
+  appointments  Appointment[]
+  products      Product[]
+  packages      Package[]
+  transactions  Transaction[]
+  cashRegisters CashRegister[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("establishments")
+}
+
+// Cliente do salão
+model Client {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  phone         String
+  birthDate     DateTime?
+  address       String?
+  notes         String?
+  preferences   String? // JSON com preferências (cor preferida, tipo de corte, etc.)
+  isActive      Boolean  @default(true)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  appointments  Appointment[]
+  transactions  Transaction[]
+  packages      ClientPackage[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("clients")
+}
+
+// Profissional/Equipe do salão
+model Professional {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  phone         String
+  specialty     String? // Ex: "Cabelo", "Manicure", "Estética"
+  commission    Float    @default(0) // Percentual de comissão
+  isActive      Boolean  @default(true)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  // Horários de trabalho
+  workSchedules WorkSchedule[]
+  
+  // Serviços que o profissional oferece
+  services      ServiceProfessional[]
+  
+  appointments  Appointment[]
+  transactions  Transaction[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("professionals")
+}
+
+// Horários de trabalho do profissional
+model WorkSchedule {
+  id            String   @id @default(cuid())
+  professionalId String
+  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek     Int      // 0 = Domingo, 1 = Segunda, etc.
+  startTime     String   // "09:00"
+  endTime       String   // "18:00"
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("work_schedules")
+}
+
+// Serviço oferecido pelo salão
+model Service {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  category      String   // "Cabelo", "Manicure", "Pedicure", "Estética", etc.
+  duration      Int      // Duração em minutos
+  price         Float
+  isActive      Boolean  @default(true)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  // Profissionais que oferecem este serviço
+  professionals ServiceProfessional[]
+  
+  // Produtos necessários para o serviço
+  products      ServiceProduct[]
+  
+  appointments  Appointment[]
+  packages      PackageService[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("services")
+}
+
+// Relação muitos-para-muitos: Profissional - Serviço
+model ServiceProfessional {
+  id            String   @id @default(cuid())
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  professionalId String
+  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([serviceId, professionalId])
+  @@map("service_professionals")
+}
+
+// Produto do salão (shampoo, esmalte, etc.)
+model Product {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  category      String? // "Cabelo", "Unhas", "Estética", etc.
+  price         Float
+  cost          Float? // Custo de compra
+  stock         Int      @default(0)
+  minStock      Int      @default(0) // Estoque mínimo para alerta
+  unit          String   @default("un") // "un", "ml", "kg", etc.
+  isActive      Boolean  @default(true)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  // Serviços que usam este produto
+  services      ServiceProduct[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("products")
+}
+
+// Relação muitos-para-muitos: Serviço - Produto
+model ServiceProduct {
+  id            String   @id @default(cuid())
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity      Float    @default(1) // Quantidade usada no serviço
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([serviceId, productId])
+  @@map("service_products")
+}
+
+// Agendamento
+model Appointment {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  professionalId String?
+  professional  Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  
+  startTime     DateTime
+  endTime       DateTime
+  status        AppointmentStatus @default(PENDING)
+  source        AppointmentSource @default(MANUAL) // MANUAL, WIDGET, WHATSAPP, etc.
+  notes         String?
+  price         Float? // Preço no momento do agendamento (pode mudar)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  transaction   Transaction?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("appointments")
+}
+
+// Pacote de serviços (ex: 10 sessões de manicure)
+model Package {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  sessions       Int      // Número de sessões
+  validityDays  Int? // Validade em dias (null = sem validade)
+  isActive      Boolean  @default(true)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  services      PackageService[]
+  clientPackages ClientPackage[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("packages")
+}
+
+// Relação muitos-para-muitos: Pacote - Serviço
+model PackageService {
+  id            String   @id @default(cuid())
+  packageId     String
+  package       Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  sessions      Int      @default(1) // Quantas sessões deste serviço no pacote
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("package_services")
+}
+
+// Pacote comprado por cliente
+model ClientPackage {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  packageId     String
+  package       Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  
+  sessionsUsed  Int      @default(0)
+  sessionsTotal Int
+  expiresAt     DateTime?
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("client_packages")
+}
+
+// Transação financeira
+model Transaction {
+  id            String   @id @default(cuid())
+  type          TransactionType
+  amount        Float
+  description   String?
+  paymentMethod String? // "Dinheiro", "Cartão", "PIX", etc.
+  
+  // Relacionamentos opcionais
+  appointmentId String?  @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  clientId      String?
+  client        Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  professionalId String?
+  professional  Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  cashRegisterId String?
+  cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("transactions")
+}
+
+// Caixa (abertura/fechamento)
+model CashRegister {
+  id            String   @id @default(cuid())
+  establishmentId String
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  openedAt      DateTime @default(now())
+  closedAt      DateTime?
+  initialAmount Float    @default(0)
+  finalAmount   Float?
+  notes         String?
+  
+  transactions  Transaction[]
+  
+  @@map("cash_registers")
+}
+
+// Enums
+enum UserRole {
+  OWNER
+  MANAGER
+  PROFESSIONAL
+  RECEPTIONIST
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  MANUAL
+  WIDGET
+  WHATSAPP
+  MESSENGER
+  INSTAGRAM
+  GOOGLE
+  FACEBOOK
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
