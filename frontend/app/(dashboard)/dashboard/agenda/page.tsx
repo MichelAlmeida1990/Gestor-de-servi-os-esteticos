@@ -146,11 +146,15 @@ export default function AgendaPage() {
     try {
       const token = localStorage.getItem('token');
 
+      // Criar datas no timezone local
       const startDate = new Date(selectedDate);
       startDate.setHours(0, 0, 0, 0);
+      
       const endDate = new Date(selectedDate);
       endDate.setHours(23, 59, 59, 999);
 
+      // toISOString() converte para UTC automaticamente
+      // Isso está correto pois o backend espera UTC
       let appointmentsUrl = `${API_URL}/appointments?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
       if (selectedProfessionalId) {
         appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
@@ -384,8 +388,26 @@ export default function AgendaPage() {
     return new Date(dateString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Função auxiliar para normalizar data para o fuso horário local
+  const normalizeDate = (date: Date): Date => {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+  };
+
+  // Função auxiliar para comparar se duas datas são o mesmo dia (ignorando hora)
+  const isSameDay = (date1: Date, date2: Date): boolean => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  };
+
   const getAppointmentsForHour = (hour: number) => {
-    return appointments.filter((apt) => new Date(apt.startTime).getHours() === hour);
+    // Filtrar agendamentos que estão na data selecionada E na hora especificada
+    return appointments.filter((apt) => {
+      const aptDate = new Date(apt.startTime);
+      return isSameDay(aptDate, selectedDate) && aptDate.getHours() === hour;
+    });
   };
 
   const navigateDate = (days: number) => {
@@ -409,7 +431,8 @@ export default function AgendaPage() {
 
   const currentHour = new Date().getHours();
   const currentMinute = new Date().getMinutes();
-  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  const today = new Date();
+  const isToday = isSameDay(selectedDate, today);
   const currentTimePosition = isToday ? ((currentHour - 8) * 100 + (currentMinute / 60) * 100) : null;
 
   return (
