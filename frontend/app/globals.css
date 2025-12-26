@@ -83,11 +83,26 @@
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
   body {
     @apply text-foreground;
     background: linear-gradient(135deg, #ffe0e8 0%, #ffd6e0 50%, #ffe4ec 100%);
     min-height: 100vh;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
   }
   
   /* Gradientes glamourosos */

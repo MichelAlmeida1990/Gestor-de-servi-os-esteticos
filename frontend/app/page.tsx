@@ -186,7 +186,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-primary">Sistema #1 para Salões de Beleza</span>
               </div>
               
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                 Gerencie seu{' '}
                 <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                   Salão de Beleza
@@ -303,7 +303,7 @@ export default function Home() {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl lg:text-5xl font-bold mb-4">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
             Tudo que você precisa em{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               um só lugar
@@ -340,7 +340,7 @@ export default function Home() {
         <div className="glass-card border-2 border-pink-600/30 rounded-3xl p-12">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-bold mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold mb-6">
                 Por que escolher o{' '}
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   BeautyFlow?
@@ -408,7 +408,7 @@ export default function Home() {
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-secondary to-accent p-12 text-white">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
           <div className="relative z-10 text-center max-w-3xl mx-auto">
-            <h2 className="text-4xl lg:text-5xl font-bold mb-6">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6">
               Pronto para transformar seu salão?
             </h2>
             <p className="text-xl mb-8 text-white/90">
