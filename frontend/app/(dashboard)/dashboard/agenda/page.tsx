@@ -161,24 +161,31 @@ export default function AgendaPage() {
       const token = localStorage.getItem('token');
 
       // Normalizar a data selecionada para o início do dia no timezone local
-      const selectedDateNormalized = new Date(selectedDate);
-      selectedDateNormalized.setHours(0, 0, 0, 0);
+      // Criar data no timezone local explicitamente
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      const day = selectedDate.getDate();
       
-      const startDate = new Date(selectedDateNormalized);
-      const endDate = new Date(selectedDateNormalized);
-      endDate.setHours(23, 59, 59, 999);
+      // Criar início do dia no timezone local (00:00:00)
+      const startDateLocal = new Date(year, month, day, 0, 0, 0, 0);
+      // Criar fim do dia no timezone local (23:59:59)
+      const endDateLocal = new Date(year, month, day, 23, 59, 59, 999);
 
-      // toISOString() converte para UTC automaticamente
-      // Isso está correto pois o backend espera UTC
-      let appointmentsUrl = `${API_URL}/appointments?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      // Converter para UTC para enviar ao backend
+      const startDateUTC = startDateLocal.toISOString();
+      const endDateUTC = endDateLocal.toISOString();
+
+      let appointmentsUrl = `${API_URL}/appointments?startDate=${startDateUTC}&endDate=${endDateUTC}`;
       if (selectedProfessionalId) {
         appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
       }
 
       console.log('📅 Carregando agendamentos para:', {
-        selectedDate: selectedDateNormalized.toLocaleDateString('pt-BR'),
-        startDateUTC: startDate.toISOString(),
-        endDateUTC: endDate.toISOString(),
+        selectedDate: selectedDate.toLocaleDateString('pt-BR'),
+        startDateLocal: startDateLocal.toLocaleString('pt-BR'),
+        endDateLocal: endDateLocal.toLocaleString('pt-BR'),
+        startDateUTC,
+        endDateUTC,
         url: appointmentsUrl
       });
 
