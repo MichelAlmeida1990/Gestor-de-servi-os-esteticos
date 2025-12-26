@@ -14,6 +14,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { beautyServices } from '@/lib/services-data';
+import { API_URL } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Service {
   id: string;
@@ -60,7 +62,7 @@ export default function ServicosPage() {
   const loadServices = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/services', {
+      const response = await fetch(`${API_URL}/services`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -81,7 +83,7 @@ export default function ServicosPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/services', {
+      const response = await fetch(`${API_URL}/services`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +134,7 @@ export default function ServicosPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/services/${editingService.id}`, {
+      const response = await fetch(`${API_URL}/services/${editingService.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +172,7 @@ export default function ServicosPage() {
   const handleQuickAdd = async (service: typeof beautyServices[0]) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/services', {
+      const response = await fetch(`${API_URL}/services`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -590,7 +592,7 @@ export default function ServicosPage() {
                         if (confirm('Tem certeza que deseja deletar este serviço?')) {
                           try {
                             const token = localStorage.getItem('token');
-                            const response = await fetch(`http://localhost:3001/services/${service.id}`, {
+                            const response = await fetch(`${API_URL}/services/${service.id}`, {
                               method: 'DELETE',
                               headers: {
                                 Authorization: `Bearer ${token}`,

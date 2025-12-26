@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Pencil, Trash2, User, RefreshCw } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface Transaction {
   id: string;
@@ -78,7 +79,7 @@ export default function FinanceiroPage() {
   const loadProfessionals = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/professionals', {
+      const response = await fetch(`${API_URL}/professionals`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -97,7 +98,7 @@ export default function FinanceiroPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      let url = 'http://localhost:3001/transactions';
+      let url = `${API_URL}/transactions`;
       if (selectedProfessionalId) {
         url += `?professionalId=${selectedProfessionalId}`;
       }
@@ -126,8 +127,8 @@ export default function FinanceiroPage() {
       const token = localStorage.getItem('token');
       const method = editingTransaction ? 'PUT' : 'POST';
       const url = editingTransaction 
-        ? `http://localhost:3001/transactions/${editingTransaction.id}`
-        : 'http://localhost:3001/transactions';
+        ? `${API_URL}/transactions/${editingTransaction.id}`
+        : `${API_URL}/transactions`;
       
       const response = await fetch(url, {
         method,
@@ -192,7 +193,7 @@ export default function FinanceiroPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/transactions/${deletingTransaction.id}`, {
+      const response = await fetch(`${API_URL}/transactions/${deletingTransaction.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

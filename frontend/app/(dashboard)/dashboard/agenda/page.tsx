@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Calendar, Clock, User, Sparkles, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, CheckCircle2, BadgeDollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { API_URL } from '@/lib/api';
 
 interface Appointment {
   id: string;
@@ -150,16 +151,16 @@ export default function AgendaPage() {
       const endDate = new Date(selectedDate);
       endDate.setHours(23, 59, 59, 999);
 
-      let appointmentsUrl = `http://localhost:3001/appointments?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      let appointmentsUrl = `${API_URL}/appointments?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
       if (selectedProfessionalId) {
         appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
       }
 
       const [appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
         fetch(appointmentsUrl, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:3001/clients', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:3001/services', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:3001/professionals', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/clients`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/services`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/professionals`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (appointmentsRes.ok) {
@@ -194,8 +195,8 @@ export default function AgendaPage() {
       const dateTime = `${appointmentDate}T${formData.startTime}`;
       const method = editingAppointment ? 'PUT' : 'POST';
       const url = editingAppointment
-        ? `http://localhost:3001/appointments/${editingAppointment.id}`
-        : 'http://localhost:3001/appointments';
+        ? `${API_URL}/appointments/${editingAppointment.id}`
+        : `${API_URL}/appointments`;
 
       const response = await fetch(url, {
         method,
@@ -270,7 +271,7 @@ export default function AgendaPage() {
   const handleConfirm = async (appointmentId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/appointments/${appointmentId}`, {
+      const response = await fetch(`${API_URL}/appointments/${appointmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -308,7 +309,7 @@ export default function AgendaPage() {
   const handleComplete = async (appointmentId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/appointments/${appointmentId}`, {
+      const response = await fetch(`${API_URL}/appointments/${appointmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -348,7 +349,7 @@ export default function AgendaPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/appointments/${deletingAppointment.id}`, {
+      const response = await fetch(`${API_URL}/appointments/${deletingAppointment.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Pencil, Trash2 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface Professional {
   id: string;
@@ -52,7 +53,7 @@ export default function ProfissionaisPage() {
   const loadProfessionals = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/professionals', {
+      const response = await fetch(`${API_URL}/professionals`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -75,8 +76,8 @@ export default function ProfissionaisPage() {
       const token = localStorage.getItem('token');
       const method = editingProfessional ? 'PUT' : 'POST';
       const url = editingProfessional 
-        ? `http://localhost:3001/professionals/${editingProfessional.id}`
-        : 'http://localhost:3001/professionals';
+        ? `${API_URL}/professionals/${editingProfessional.id}`
+        : `${API_URL}/professionals`;
       
       const response = await fetch(url, {
         method,
@@ -143,7 +144,7 @@ export default function ProfissionaisPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/professionals/${deletingProfessional.id}`, {
+      const response = await fetch(`${API_URL}/professionals/${deletingProfessional.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

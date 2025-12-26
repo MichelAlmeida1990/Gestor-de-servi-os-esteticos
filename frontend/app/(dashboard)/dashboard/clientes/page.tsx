@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { API_URL } from '@/lib/api';
 import { Pencil, Trash2 } from 'lucide-react';
 
 interface Client {
@@ -51,7 +52,7 @@ export default function ClientesPage() {
   const loadClients = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/clients', {
+      const response = await fetch(`${API_URL}/clients`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -74,8 +75,8 @@ export default function ClientesPage() {
       const token = localStorage.getItem('token');
       const method = editingClient ? 'PUT' : 'POST';
       const url = editingClient 
-        ? `http://localhost:3001/clients/${editingClient.id}`
-        : 'http://localhost:3001/clients';
+        ? `${API_URL}/clients/${editingClient.id}`
+        : `${API_URL}/clients`;
       
       const response = await fetch(url, {
         method,
@@ -141,7 +142,7 @@ export default function ClientesPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/clients/${deletingClient.id}`, {
+      const response = await fetch(`${API_URL}/clients/${deletingClient.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
