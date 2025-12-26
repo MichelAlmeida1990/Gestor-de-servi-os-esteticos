@@ -287,11 +287,29 @@ export default function AgendaPage() {
       const token = localStorage.getItem('token');
       // Usar data do formulário ou data selecionada como fallback
       const appointmentDate = formData.date || selectedDateString;
-      const dateTime = `${appointmentDate}T${formData.startTime}`;
+      
+      // Criar data corretamente considerando timezone local
+      // Parse da data e hora separadamente para evitar problemas de timezone
+      const [year, month, day] = appointmentDate.split('-').map(Number);
+      const [hours, minutes] = formData.startTime.split(':').map(Number);
+      
+      // Criar data no timezone local
+      const localDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      
+      // Converter para ISO string (que será em UTC)
+      const dateTimeISO = localDateTime.toISOString();
+      
       const method = editingAppointment ? 'PUT' : 'POST';
       const url = editingAppointment
         ? `${API_URL}/appointments/${editingAppointment.id}`
         : `${API_URL}/appointments`;
+
+      console.log('📅 Criando/Editando agendamento:', {
+        appointmentDate,
+        startTime: formData.startTime,
+        localDateTime: localDateTime.toLocaleString('pt-BR'),
+        dateTimeISO,
+      });
 
       const response = await fetch(url, {
         method,
@@ -302,7 +320,7 @@ export default function AgendaPage() {
         body: JSON.stringify({
           ...formData,
           professionalId: formData.professionalId || null,
-          startTime: dateTime,
+          startTime: dateTimeISO,
           status: editingAppointment ? formData.status : undefined,
         }),
       });
