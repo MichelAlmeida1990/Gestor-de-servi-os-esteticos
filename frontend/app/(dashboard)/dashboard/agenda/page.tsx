@@ -839,9 +839,10 @@ export default function AgendaPage() {
               </div>
             )}
 
-            <div className="divide-y divide-border/30">
+            <div className="divide-y divide-border/30" key={`timeline-${selectedDateString}`}>
               {hours.map((hour) => {
                 const hourAppointments = getAppointmentsForHour(hour);
+                // Para datas futuras, não considerar como "past" ou "current"
                 const isPast = isToday && hour < currentHour;
                 const isCurrent = isToday && hour === currentHour;
 
