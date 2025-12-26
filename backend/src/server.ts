@@ -27,33 +27,11 @@ async function buildServer() {
   
   // Configurar CORS - permitir todas as origens do Vercel e localhost
   await server.register(cors, {
-    origin: (origin, cb) => {
-      // Permitir requisições sem origem (ex: Postman, curl, mobile apps)
-      if (!origin) {
-        return cb(null, true);
-      }
-      
-      // Permitir localhost em desenvolvimento
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return cb(null, true);
-      }
-      
-      // Permitir domínios do Vercel (qualquer subdomínio)
-      if (origin.includes('.vercel.app') || origin.includes('vercel.app')) {
-        return cb(null, true);
-      }
-      
-      // Permitir a URL específica do frontend
-      if (origin === frontendUrl || origin.startsWith(frontendUrl)) {
-        return cb(null, true);
-      }
-      
-      // Permitir por padrão (para desenvolvimento)
-      return cb(null, true);
-    },
+    origin: true, // Permitir todas as origens temporariamente para debug
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Security - Configurar Helmet para não bloquear CORS
