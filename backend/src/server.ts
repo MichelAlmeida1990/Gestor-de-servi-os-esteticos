@@ -16,23 +16,35 @@ const server = Fastify({
 
 // Registro de plugins
 async function buildServer() {
-  // CORS - Extrair apenas o domínio da URL
+  // CORS - Configurar origem do frontend
   let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   
   // Remove espaços e barras no final
   frontendUrl = frontendUrl.trim().replace(/\/+$/, '');
   
-  // Se for uma URL completa (começa com http:// ou https://), extrair apenas o domínio
-  // O @fastify/cors aceita URLs completas, mas vamos garantir que está correto
-  const corsOrigin = frontendUrl.startsWith('http://') || frontendUrl.startsWith('https://')
-    ? frontendUrl
-    : `https://${frontendUrl}`;
-  
   // Log para debug
-  console.log('🔗 FRONTEND_URL configurada:', corsOrigin);
+  console.log('🔗 FRONTEND_URL configurada:', frontendUrl);
   
+  // Configurar CORS com função para validar origem
   await server.register(cors, {
-    origin: corsOrigin,
+    origin: (origin, cb) => {
+      // Permitir requisições sem origem (ex: Postman, curl)
+      if (!origin) {
+        return cb(null, true);
+      }
+      
+      // Permitir a origem do frontend
+      if (origin === frontendUrl || origin.startsWith(frontendUrl)) {
+        return cb(null, true);
+      }
+      
+      // Permitir localhost em desenvolvimento
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return cb(null, true);
+      }
+      
+      return cb(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
   });
 
