@@ -16,9 +16,13 @@ const server = Fastify({
 
 // Registro de plugins
 async function buildServer() {
-  // CORS
+  // CORS - Limpar URL do frontend (remover barra no final se houver)
+  const frontendUrl = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.replace(/\/$/, '') // Remove barra no final
+    : 'http://localhost:3000';
+  
   await server.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: frontendUrl,
     credentials: true,
   });
 
