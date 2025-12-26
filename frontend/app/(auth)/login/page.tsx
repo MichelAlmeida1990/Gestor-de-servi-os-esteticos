@@ -66,24 +66,24 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-3xl transform rotate-6"></div>
         <Card className="relative glass-card border-2 border-pink-600/30 shadow-2xl">
-          <CardHeader className="text-center pb-6">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-primary via-secondary to-accent">
-                <Sparkles className="w-8 h-8 text-white" />
+          <CardHeader className="text-center pb-4">
+              <div className="flex justify-center mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
             </div>
-            <CardTitle className="text-3xl font-bold">
+            <CardTitle className="text-2xl font-bold">
               <span className="text-primary">Bem-vindo</span>{' '}
               <span className="text-accent">de volta!</span>
             </CardTitle>
-            <CardDescription className="text-base mt-2">
+            <CardDescription className="text-sm mt-2">
               Faça login para acessar seu salão
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-base font-semibold">Email</Label>
+                <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -91,11 +91,11 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-12 bg-background/80 border-2 border-input focus:border-primary"
+                  className="h-10 bg-background/80 border-2 border-input focus:border-primary text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-base font-semibold">Senha</Label>
+                <Label htmlFor="password" className="text-sm font-semibold">Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -103,23 +103,23 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 bg-background/80 border-2 border-input focus:border-primary"
+                  className="h-10 bg-background/80 border-2 border-input focus:border-primary text-sm"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all"
+                className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all text-sm"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <Clock className="w-5 h-5 mr-2 animate-spin" />
+                    <Clock className="w-4 h-4 mr-2 animate-spin" />
                     Entrando...
                   </>
                 ) : (
                   <>
                     Entrar
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
               </Button>

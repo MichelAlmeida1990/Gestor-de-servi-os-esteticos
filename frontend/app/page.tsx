@@ -232,17 +232,17 @@ export default function Home() {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-3xl transform rotate-6"></div>
             <Card className="relative glass-card border-2 border-pink-600/30 shadow-2xl">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h2 className="text-3xl font-bold mb-2">
+              <CardContent className="p-6">
+                <div className="text-center mb-4">
+                  <h2 className="text-xl md:text-2xl font-bold mb-2">
                     <span className="text-primary">Bem-vindo</span> de volta!
                   </h2>
-                  <p className="text-muted-foreground">Faça login para acessar seu salão</p>
+                  <p className="text-sm text-muted-foreground">Faça login para acessar seu salão</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-5">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-base font-semibold">Email</Label>
+                    <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -250,12 +250,12 @@ export default function Home() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 bg-background/80 border-2 border-input focus:border-primary"
+                      className="h-10 bg-background/80 border-2 border-input focus:border-primary text-sm"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-base font-semibold">Senha</Label>
+                    <Label htmlFor="password" className="text-sm font-semibold">Senha</Label>
                     <Input
                       id="password"
                       type="password"
@@ -263,24 +263,24 @@ export default function Home() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-12 bg-background/80 border-2 border-input focus:border-primary"
+                      className="h-10 bg-background/80 border-2 border-input focus:border-primary text-sm"
                     />
                   </div>
 
                   <Button 
                     type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all"
+                    className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all text-sm"
                     disabled={loading}
                   >
                     {loading ? (
                       <>
-                        <Clock className="w-5 h-5 mr-2 animate-spin" />
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
                         Entrando...
                       </>
                     ) : (
                       <>
                         Entrar
-                        <ArrowRight className="w-5 h-5 ml-2" />
+                        <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
                   </Button>
