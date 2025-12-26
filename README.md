@@ -98,10 +98,10 @@ app-web-agendamento/
 
 ### Pré-requisitos
 - Node.js 20+
-- PostgreSQL
+- PostgreSQL (local ou via Docker)
 - npm ou yarn
 
-### Instalação
+### Instalação Local
 
 ```bash
 # Instalar dependências do frontend
@@ -122,6 +122,20 @@ npx prisma migrate dev
 # Iniciar desenvolvimento
 npm run dev
 ```
+
+### 🚀 Deploy em Produção (Gratuito)
+
+Para fazer deploy usando serviços gratuitos:
+
+1. **Leia o guia completo**: [GUIA_DEPLOY_GRATUITO.md](./GUIA_DEPLOY_GRATUITO.md)
+2. **Versão rápida**: [DEPLOY_PASSO_A_PASSO.md](./DEPLOY_PASSO_A_PASSO.md)
+3. **Checklist**: [CHECKLIST_DEPLOY.md](./CHECKLIST_DEPLOY.md)
+
+**Serviços utilizados:**
+- **Backend + Banco**: Render (Free)
+- **Frontend**: Vercel (Free)
+
+**Tempo estimado**: 25-30 minutos
 
 ## 📚 Documentação
 
