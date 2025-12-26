@@ -25,26 +25,15 @@ async function buildServer() {
   // Log para debug
   console.log('🔗 FRONTEND_URL configurada:', frontendUrl);
   
-  // Configurar CORS com função para validar origem
+  // Configurar CORS - usar array de origens permitidas
+  const allowedOrigins = [
+    frontendUrl,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+  
   await server.register(cors, {
-    origin: (origin, cb) => {
-      // Permitir requisições sem origem (ex: Postman, curl)
-      if (!origin) {
-        return cb(null, true);
-      }
-      
-      // Permitir a origem do frontend
-      if (origin === frontendUrl || origin.startsWith(frontendUrl)) {
-        return cb(null, true);
-      }
-      
-      // Permitir localhost em desenvolvimento
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return cb(null, true);
-      }
-      
-      return cb(new Error('Not allowed by CORS'), false);
-    },
+    origin: allowedOrigins,
     credentials: true,
   });
 
