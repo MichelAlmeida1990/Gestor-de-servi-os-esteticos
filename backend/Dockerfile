@@ -25,3 +25,4 @@ EXPOSE 3001
 # Comando de start
 CMD ["npm", "start"]
 
+

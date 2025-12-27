@@ -103,38 +103,8 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
       const startTime = new Date(body.startTime);
       const endTime = new Date(startTime.getTime() + service.duration * 60000);
 
-      // Verificar conflitos de horário
-      if (body.professionalId) {
-        const conflicting = await prisma.appointment.findFirst({
-          where: {
-            professionalId: body.professionalId,
-            establishmentId: user.establishments[0].id,
-            status: {
-              notIn: ['CANCELLED', 'NO_SHOW'],
-            },
-            OR: [
-              {
-                startTime: { lte: startTime },
-                endTime: { gt: startTime },
-              },
-              {
-                startTime: { lt: endTime },
-                endTime: { gte: endTime },
-              },
-              {
-                startTime: { gte: startTime },
-                endTime: { lte: endTime },
-              },
-            ],
-          },
-        });
-
-        if (conflicting) {
-          return reply.status(400).send({
-            error: 'Horário já ocupado para este profissional',
-          });
-        }
-      }
+      // Validação de conflitos removida para permitir encaixes/agendamentos sobrepostos
+      // Isso permite que profissionais tenham múltiplos atendimentos simultâneos quando necessário
 
       const appointment = await prisma.appointment.create({
         data: {
@@ -258,6 +228,7 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
       const wasCompleted = existingAppointment.status === 'COMPLETED';
       const willBeCompleted = body.status === 'COMPLETED';
       const shouldCreateTransaction = willBeCompleted && !wasCompleted && !existingAppointment.transaction;
+      const shouldCreateHistory = willBeCompleted && !wasCompleted;
 
       const appointment = await prisma.appointment.updateMany({
         where: {
@@ -280,6 +251,29 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
           transaction: true,
         },
       });
+
+      // Criar histórico de atendimento automaticamente quando agendamento é concluído
+      if (shouldCreateHistory && updatedAppointment) {
+        try {
+          await prisma.clientHistory.create({
+            data: {
+              clientId: updatedAppointment.clientId,
+              appointmentId: updatedAppointment.id,
+              type: 'APPOINTMENT',
+              title: `Atendimento - ${updatedAppointment.service.name}`,
+              description: `Serviço realizado: ${updatedAppointment.service.name}. Profissional: ${updatedAppointment.professional?.name || 'Não especificado'}. Duração: ${updatedAppointment.service.duration} minutos.`,
+              serviceName: updatedAppointment.service.name,
+              professionalName: updatedAppointment.professional?.name || null,
+              servicePrice: updatedAppointment.price || updatedAppointment.service.price,
+              serviceDuration: updatedAppointment.service.duration,
+              createdBy: userId,
+            },
+          });
+        } catch (error) {
+          console.error('Erro ao criar histórico de atendimento:', error);
+          // Não falha o update do agendamento se o histórico falhar
+        }
+      }
 
       // Criar transação automaticamente quando agendamento é concluído
       if (shouldCreateTransaction && updatedAppointment) {

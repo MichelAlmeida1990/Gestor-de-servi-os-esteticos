@@ -28,6 +28,14 @@ interface Transaction {
   professionalId: string | null;
   client: { name: string } | null;
   professional: { name: string } | null;
+  appointment?: {
+    id: string;
+    startTime: string;
+    endTime: string;
+    service: {
+      name: string;
+    };
+  } | null;
 }
 
 interface Professional {
@@ -42,6 +50,28 @@ interface Summary {
   balance: number;
   professionalEarnings?: number | null;
 }
+
+// Função auxiliar para formatar data corretamente considerando timezone
+const formatDate = (dateString: string, showTime: boolean = true) => {
+  const date = new Date(dateString);
+  // Ajustar para timezone local
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  
+  const dateStr = localDate.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  
+  if (!showTime) return dateStr;
+  
+  const timeStr = localDate.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  
+  return { date: dateStr, time: timeStr };
+};
 
 export default function FinanceiroPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -542,13 +572,25 @@ export default function FinanceiroPage() {
                 {transactions.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>
-                      {new Date(transaction.createdAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      <div className="flex flex-col">
+                        {(() => {
+                          const dateToShow = transaction.appointment 
+                            ? transaction.appointment.startTime 
+                            : transaction.createdAt;
+                          const formatted = formatDate(dateToShow);
+                          return (
+                            <>
+                              <span className="text-sm font-medium">{formatted.date}</span>
+                              <span className="text-xs text-muted-foreground">{formatted.time}</span>
+                              {transaction.appointment && (
+                                <span className="text-xs text-blue-600 mt-0.5">
+                                  📅 Agendamento
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -559,7 +601,16 @@ export default function FinanceiroPage() {
                         {transaction.type === 'INCOME' ? 'Receita' : 'Despesa'}
                       </span>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{transaction.description || '-'}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="flex flex-col">
+                        <span className="truncate">{transaction.description || '-'}</span>
+                        {transaction.appointment && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            📅 {transaction.appointment.service.name}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     {!selectedProfessionalId && (
                       <TableCell>
                         {transaction.professional ? (

@@ -130,3 +130,4 @@ Cada usuário (profissional de unhas, salão, etc.) só consegue:
 3. Implementar rate limiting para prevenir ataques de força bruta
 4. Adicionar validação de CORS mais restritiva em produção
 
+

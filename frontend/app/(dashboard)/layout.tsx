@@ -20,7 +20,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -36,18 +36,18 @@ export default function DashboardLayout({
           setUser(data.user);
         } else {
           localStorage.removeItem('token');
-          router.push('/login');
+          router.push('/');
         }
       })
       .catch(() => {
         localStorage.removeItem('token');
-        router.push('/login');
+        router.push('/');
       });
   }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    router.push('/login');
+    router.push('/');
   };
 
   const navItems = [

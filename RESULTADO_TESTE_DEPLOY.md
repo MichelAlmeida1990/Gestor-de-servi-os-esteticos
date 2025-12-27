@@ -89,3 +89,4 @@ git push -u origin main
 3. Limpar cache na Vercel
 4. Verificar se todas as dependências estão no `package.json`
 
+

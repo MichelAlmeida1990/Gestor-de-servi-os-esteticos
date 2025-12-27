@@ -170,3 +170,4 @@
 4. Configurar backup do banco de dados
 5. Monitorar performance e uso
 
+

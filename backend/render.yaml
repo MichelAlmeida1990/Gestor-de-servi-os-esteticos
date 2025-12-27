@@ -12,3 +12,4 @@ services:
         value: 3001
     # As outras variáveis (DATABASE_URL, JWT_SECRET, FRONTEND_URL) devem ser adicionadas manualmente no dashboard
 
+

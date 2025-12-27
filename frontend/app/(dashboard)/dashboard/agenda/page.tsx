@@ -45,34 +45,39 @@ interface Appointment {
   } | null;
 }
 
-interface Client {
-  id: string;
-  name: string;
-}
+interface Client { id: string; name: string; }
+interface Service { id: string; name: string; duration: number; price: number; }
+interface Professional { id: string; name: string; isActive?: boolean; }
 
-interface Service {
-  id: string;
-  name: string;
-  duration: number;
-  price: number;
-}
-
-interface Professional {
-  id: string;
-  name: string;
-  isActive?: boolean;
-}
-
-const hours = Array.from({ length: 14 }, (_, i) => i + 8); // 8h às 21h
+const hours = Array.from({ length: 14 }, (_, i) => i + 8);
+const hourMarkers = Array.from({ length: 7 }, (_, i) => (i * 2) + 8);
 
 const getStatusColor = (status: string) => {
-  const colors: Record<string, { bg: string; text: string; border: string; glow: string }> = {
-    PENDING: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50', glow: 'shadow-yellow-500/20' },
-    CONFIRMED: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50', glow: 'shadow-green-500/20' },
-    IN_PROGRESS: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50', glow: 'shadow-blue-500/20' },
-    COMPLETED: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50', glow: 'shadow-gray-500/20' },
-    CANCELLED: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/50', glow: 'shadow-red-500/20' },
-    NO_SHOW: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/50', glow: 'shadow-orange-500/20' },
+  const colors: Record<string, { bg: string; text: string; border: string; bgStyle?: string; borderStyle?: string }> = {
+    PENDING: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50' },
+    CONFIRMED: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
+    IN_PROGRESS: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
+    COMPLETED: { 
+      bg: 'bg-green-500/20', 
+      text: 'text-green-600', 
+      border: 'border-green-500/50',
+      bgStyle: 'rgba(34, 197, 94, 0.3)', // Verde mais intenso
+      borderStyle: 'rgba(34, 197, 94, 0.7)' // Borda verde mais intensa
+    },
+    CANCELLED: { 
+      bg: 'bg-red-500/20', 
+      text: 'text-red-600', 
+      border: 'border-red-500/50',
+      bgStyle: 'rgba(239, 68, 68, 0.3)', // Vermelho mais intenso
+      borderStyle: 'rgba(239, 68, 68, 0.7)' // Borda vermelha mais intensa
+    },
+    NO_SHOW: { 
+      bg: 'bg-red-500/20', 
+      text: 'text-red-600', 
+      border: 'border-red-500/50',
+      bgStyle: 'rgba(239, 68, 68, 0.3)', // Vermelho mais intenso
+      borderStyle: 'rgba(239, 68, 68, 0.7)' // Borda vermelha mais intensa
+    },
   };
   return colors[status] || colors.PENDING;
 };
@@ -131,6 +136,7 @@ export default function AgendaPage() {
   const [monthAppointments, setMonthAppointments] = useState<Appointment[]>([]);
   const [monthCalendarOpen, setMonthCalendarOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
   const [formData, setFormData] = useState({
     clientId: '',
     serviceId: '',
@@ -138,56 +144,37 @@ export default function AgendaPage() {
     date: '',
     startTime: '',
     notes: '',
-    status: 'PENDING' as 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW',
+    status: 'PENDING' as const,
   });
 
   const selectedDateString = selectedDate.toISOString().split('T')[0];
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedProfessionalId]);
 
   useEffect(() => {
     if (activeTab === 'month' || monthCalendarOpen) {
       loadMonthData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, selectedProfessionalId, monthCalendarOpen]);
+  }, [currentMonth, selectedProfessionalId, activeTab, monthCalendarOpen]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-
-      // Normalizar a data selecionada para o início do dia no timezone local
-      // Criar data no timezone local explicitamente
       const year = selectedDate.getFullYear();
       const month = selectedDate.getMonth();
       const day = selectedDate.getDate();
-      
-      // Criar início do dia no timezone local (00:00:00)
+
       const startDateLocal = new Date(year, month, day, 0, 0, 0, 0);
-      // Criar fim do dia no timezone local (23:59:59)
       const endDateLocal = new Date(year, month, day, 23, 59, 59, 999);
 
-      // Converter para UTC para enviar ao backend
       const startDateUTC = startDateLocal.toISOString();
       const endDateUTC = endDateLocal.toISOString();
 
       let appointmentsUrl = `${API_URL}/appointments?startDate=${startDateUTC}&endDate=${endDateUTC}`;
-      if (selectedProfessionalId) {
-        appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
-      }
-
-      console.log('📅 Carregando agendamentos para:', {
-        selectedDate: selectedDate.toLocaleDateString('pt-BR'),
-        startDateLocal: startDateLocal.toLocaleString('pt-BR'),
-        endDateLocal: endDateLocal.toLocaleString('pt-BR'),
-        startDateUTC,
-        endDateUTC,
-        url: appointmentsUrl
-      });
+      if (selectedProfessionalId) appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
 
       const [appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
         fetch(appointmentsUrl, { headers: { Authorization: `Bearer ${token}` } }),
@@ -196,34 +183,10 @@ export default function AgendaPage() {
         fetch(`${API_URL}/professionals`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      if (appointmentsRes.ok) {
-        const data = await appointmentsRes.json();
-        console.log('📋 Agendamentos recebidos do backend:', data.appointments?.length || 0);
-        if (data.appointments && data.appointments.length > 0) {
-          console.log('📋 Detalhes dos agendamentos:', data.appointments.map((apt: Appointment) => ({
-            id: apt.id,
-            startTime: apt.startTime,
-            startTimeLocal: new Date(apt.startTime).toLocaleString('pt-BR'),
-            startTimeDate: new Date(apt.startTime).toLocaleDateString('pt-BR'),
-            client: apt.client.name,
-          })));
-        }
-        setAppointments(data.appointments || []);
-      } else {
-        console.error('❌ Erro ao buscar agendamentos:', appointmentsRes.status, appointmentsRes.statusText);
-      }
-      if (clientsRes.ok) {
-        const data = await clientsRes.json();
-        setClients(data.clients || []);
-      }
-      if (servicesRes.ok) {
-        const data = await servicesRes.json();
-        setServices(data.services || []);
-      }
-      if (professionalsRes.ok) {
-        const data = await professionalsRes.json();
-        setProfessionals(data.professionals || []);
-      }
+      if (appointmentsRes.ok) setAppointments((await appointmentsRes.json()).appointments || []);
+      if (clientsRes.ok) setClients((await clientsRes.json()).clients || []);
+      if (servicesRes.ok) setServices((await servicesRes.json()).services || []);
+      if (professionalsRes.ok) setProfessionals((await professionalsRes.json()).professionals || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -234,68 +197,42 @@ export default function AgendaPage() {
   const loadMonthData = async () => {
     try {
       const token = localStorage.getItem('token');
-      
-      // Primeiro dia do mês
       const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
       firstDay.setHours(0, 0, 0, 0);
-      
-      // Último dia do mês
       const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
       lastDay.setHours(23, 59, 59, 999);
 
-      let appointmentsUrl = `${API_URL}/appointments?startDate=${firstDay.toISOString()}&endDate=${lastDay.toISOString()}`;
-      if (selectedProfessionalId) {
-        appointmentsUrl += `&professionalId=${selectedProfessionalId}`;
-      }
+      let url = `${API_URL}/appointments?startDate=${firstDay.toISOString()}&endDate=${lastDay.toISOString()}`;
+      if (selectedProfessionalId) url += `&professionalId=${selectedProfessionalId}`;
 
-      const response = await fetch(appointmentsUrl, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setMonthAppointments(data.appointments || []);
-      }
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setMonthAppointments((await res.json()).appointments || []);
     } catch (error) {
-      console.error('Erro ao carregar agendamentos do mês:', error);
+      console.error('Erro ao carregar mês:', error);
     }
   };
 
   const getAppointmentsForDay = (date: Date) => {
     return monthAppointments.filter((apt) => {
-      const aptDate = new Date(apt.startTime);
-      return aptDate.getDate() === date.getDate() &&
-             aptDate.getMonth() === date.getMonth() &&
-             aptDate.getFullYear() === date.getFullYear();
+      const d = new Date(apt.startTime);
+      return d.getDate() === date.getDate() && d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
     });
   };
 
   const getDaysInMonth = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
     const days = [];
-    
-    // Adicionar dias vazios no início
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    
-    // Adicionar dias do mês
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
-    }
-    
+    for (let i = 0; i < first.getDay(); i++) days.push(null);
+    for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d));
     return days;
   };
 
-  const navigateMonth = (direction: number) => {
+  const navigateMonth = (dir: number) => {
     const newMonth = new Date(currentMonth);
-    newMonth.setMonth(newMonth.getMonth() + direction);
+    newMonth.setMonth(newMonth.getMonth() + dir);
     setCurrentMonth(newMonth);
   };
 
@@ -303,283 +240,129 @@ export default function AgendaPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      // Usar data do formulário ou data selecionada como fallback
-      const appointmentDate = formData.date || selectedDateString;
-      
-      // Criar data corretamente considerando timezone local
-      // Parse da data e hora separadamente para evitar problemas de timezone
-      const [year, month, day] = appointmentDate.split('-').map(Number);
-      const [hours, minutes] = formData.startTime.split(':').map(Number);
-      
-      // Criar data no timezone local
-      const localDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
-      
-      // Converter para ISO string (que será em UTC)
-      const dateTimeISO = localDateTime.toISOString();
-      
+      const date = formData.date || selectedDateString;
+      const [y, m, d] = date.split('-').map(Number);
+      const [h, min] = formData.startTime.split(':').map(Number);
+      const localDate = new Date(y, m - 1, d, h, min);
+      const iso = localDate.toISOString();
+
       const method = editingAppointment ? 'PUT' : 'POST';
-      const url = editingAppointment
-        ? `${API_URL}/appointments/${editingAppointment.id}`
-        : `${API_URL}/appointments`;
+      const url = editingAppointment ? `${API_URL}/appointments/${editingAppointment.id}` : `${API_URL}/appointments`;
 
-      console.log('📅 Criando/Editando agendamento:', {
-        appointmentDate,
-        startTime: formData.startTime,
-        localDateTime: localDateTime.toLocaleString('pt-BR'),
-        dateTimeISO,
-      });
-
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...formData,
           professionalId: formData.professionalId || null,
-          startTime: dateTimeISO,
+          startTime: iso,
           status: editingAppointment ? formData.status : undefined,
         }),
       });
 
-      if (response.ok) {
-        toast({
-          title: editingAppointment ? 'Agendamento atualizado!' : 'Agendamento criado!',
-          description: editingAppointment
-            ? 'O agendamento foi atualizado com sucesso.'
-            : 'O agendamento foi criado com sucesso.',
-          variant: 'success',
-        });
-        setOpen(false);
-        setEditOpen(false);
-        setEditingAppointment(null);
-        setFormData({
-          clientId: '',
-          serviceId: '',
-          professionalId: '',
-          date: '',
-          startTime: '',
-          notes: '',
-          status: 'PENDING',
-        });
+      if (res.ok) {
+        toast({ title: editingAppointment ? 'Atualizado!' : 'Criado!', variant: 'success' });
+        setOpen(false); setEditOpen(false); setEditingAppointment(null);
+        setFormData({ clientId: '', serviceId: '', professionalId: '', date: '', startTime: '', notes: '', status: 'PENDING' });
         loadData();
       } else {
-        const data = await response.json();
-        toast({
-          title: 'Erro',
-          description: data.error || (editingAppointment ? 'Erro ao atualizar agendamento' : 'Erro ao criar agendamento'),
-          variant: 'destructive',
-        });
+        const data = await res.json();
+        toast({ title: 'Erro', description: data.error || 'Falha na operação', variant: 'destructive' });
       }
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao conectar com o servidor',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Erro', description: 'Sem conexão com o servidor', variant: 'destructive' });
     }
   };
 
-  const handleEdit = (appointment: Appointment) => {
-    setEditingAppointment(appointment);
-    const startDate = new Date(appointment.startTime);
-    const timeString = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
-
-    const dateString = startDate.toISOString().split('T')[0];
+  const handleEdit = (apt: Appointment) => {
+    const start = new Date(apt.startTime);
+    setEditingAppointment(apt);
     setFormData({
-      clientId: appointment.client.id,
-      serviceId: appointment.service.id,
-      professionalId: appointment.professional?.id || '',
-      date: dateString,
-      startTime: timeString,
-      notes: appointment.notes || '',
-      status: appointment.status as any,
+      clientId: apt.client.id,
+      serviceId: apt.service.id,
+      professionalId: apt.professional?.id || '',
+      date: start.toISOString().split('T')[0],
+      startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
+      notes: apt.notes || '',
+      status: apt.status as any,
     });
     setEditOpen(true);
   };
 
-  const handleConfirm = async (appointmentId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/appointments/${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: 'CONFIRMED',
-        }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: 'Agendamento confirmado!',
-          description: 'O agendamento foi confirmado com sucesso.',
-          variant: 'success',
-        });
-        loadData();
-      } else {
-        const data = await response.json();
-        toast({
-          title: 'Erro',
-          description: data.error || 'Erro ao confirmar agendamento',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao conectar com o servidor',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleComplete = async (appointmentId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/appointments/${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: 'COMPLETED',
-        }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: 'Agendamento concluído!',
-          description: 'O agendamento foi marcado como concluído e uma transação de receita foi criada automaticamente.',
-          variant: 'success',
-        });
-        loadData();
-      } else {
-        const data = await response.json();
-        toast({
-          title: 'Erro',
-          description: data.error || 'Erro ao concluir agendamento',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao conectar com o servidor',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleDelete = async () => {
     if (!deletingAppointment) return;
-
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/appointments/${deletingAppointment.id}`, {
+      const res = await fetch(`${API_URL}/appointments/${deletingAppointment.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        toast({
-          title: 'Agendamento deletado!',
-          description: 'O agendamento foi removido com sucesso.',
-          variant: 'success',
-        });
-        setDeleteOpen(false);
-        setDeletingAppointment(null);
-        loadData();
-      } else {
-        const data = await response.json();
-        toast({
-          title: 'Erro',
-          description: data.error || 'Erro ao deletar agendamento',
-          variant: 'destructive',
-        });
+      if (res.ok) {
+        toast({ title: 'Deletado!', variant: 'success' });
+        setDeleteOpen(false); setDeletingAppointment(null); loadData();
       }
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao conectar com o servidor',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao deletar', variant: 'destructive' });
     }
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: string) => {
+    const dateObj = new Date(date);
+    // Ajustar para timezone local para evitar problemas de conversão
+    const localDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000);
+    return localDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
-
-  // Função auxiliar para normalizar data para o fuso horário local
-  const normalizeDate = (date: Date): Date => {
-    const normalized = new Date(date);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized;
-  };
-
-  // Função auxiliar para comparar se duas datas são o mesmo dia (ignorando hora)
-  const isSameDay = (date1: Date, date2: Date): boolean => {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
-  };
-
-  const getAppointmentsForHour = (hour: number) => {
-    // Normalizar a data selecionada (sem hora, apenas dia)
-    const selectedDateNormalized = new Date(selectedDate);
-    selectedDateNormalized.setHours(0, 0, 0, 0);
-    
-    const selectedDay = selectedDateNormalized.getDate();
-    const selectedMonth = selectedDateNormalized.getMonth();
-    const selectedYear = selectedDateNormalized.getFullYear();
-    
-    const filtered = appointments.filter((apt) => {
-      // Converter a data do agendamento (que vem em UTC/ISO) para timezone local
-      const aptDate = new Date(apt.startTime);
-      
-      // Normalizar para comparar apenas dia, mês e ano (ignorar hora inicialmente)
-      const aptDay = aptDate.getDate();
-      const aptMonth = aptDate.getMonth();
-      const aptYear = aptDate.getFullYear();
-      const aptHour = aptDate.getHours();
-      
-      // Verificar se está no mesmo dia E mesma hora
-      const isSameDayAndHour = aptYear === selectedYear && 
-                               aptMonth === selectedMonth && 
-                               aptDay === selectedDay && 
-                               aptHour === hour;
-      
-      // Log detalhado para debug
-      if (aptYear === selectedYear && aptMonth === selectedMonth && aptDay === selectedDay) {
-        console.log(`🔍 Agendamento encontrado no dia ${selectedDay}/${selectedMonth + 1}/${selectedYear}, hora ${aptHour}, filtrado para ${hour}:`, {
-          aptId: apt.id,
-          aptHour,
-          filterHour: hour,
-          matches: isSameDayAndHour,
-          aptDateLocal: aptDate.toLocaleString('pt-BR'),
-        });
-      }
-      
-      return isSameDayAndHour;
+  
+  const formatDate = (date: string) => {
+    const dateObj = new Date(date);
+    // Ajustar para timezone local
+    const localDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000);
+    return localDate.toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
     });
-    
-    // Log para debug (apenas se houver agendamentos)
-    if (filtered.length > 0) {
-      console.log(`⏰ Hora ${hour}:00 - ${filtered.length} agendamento(s)`, filtered);
-    }
-    
-    return filtered;
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => d1.toDateString() === d2.toDateString();
+
+  const getDayAppointments = () => appointments.filter(a => isSameDay(new Date(a.startTime), selectedDate));
+
+  const getAppointmentPosition = (apt: Appointment) => {
+    const start = new Date(apt.startTime);
+    const dayStart = new Date(selectedDate); dayStart.setHours(8, 0, 0, 0);
+    const minutesFromStart = (start.getTime() - dayStart.getTime()) / 60000;
+    const duration = apt.service.duration;
+    const pixelsPerMinute = 0.67;
+    // Adiciona um offset maior (15px) para que os agendamentos não fiquem exatamente nas linhas de hora
+    const offsetFromHourLine = 15;
+    const top = (minutesFromStart * pixelsPerMinute) + offsetFromHourLine;
+    const height = Math.max(duration * pixelsPerMinute, 35);
+    return { top, height };
+  };
+
+  const appointmentsOverlap = (a1: Appointment, a2: Appointment) =>
+    new Date(a1.startTime) < new Date(a2.endTime) && new Date(a1.endTime) > new Date(a2.startTime);
+
+  const organizeOverlappingAppointments = (appts: Appointment[]) => {
+    const sorted = [...appts].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const columns: Appointment[][] = [];
+    sorted.forEach(apt => {
+      let placed = false;
+      for (const col of columns) {
+        if (!col.some(ex => appointmentsOverlap(ex, apt))) {
+          col.push(apt); placed = true; break;
+        }
+      }
+      if (!placed) columns.push([apt]);
+    });
+    return columns;
   };
 
   const navigateDate = (days: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + days);
-    setSelectedDate(newDate);
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + days);
+    setSelectedDate(d);
   };
 
   const goToToday = () => setSelectedDate(new Date());
@@ -588,87 +371,67 @@ export default function AgendaPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando agenda...</p>
         </div>
       </div>
     );
   }
 
-  const currentHour = new Date().getHours();
-  const currentMinute = new Date().getMinutes();
-  const today = new Date();
-  const isToday = isSameDay(selectedDate, today);
-  const currentTimePosition = isToday ? ((currentHour - 8) * 100 + (currentMinute / 60) * 100) : null;
+  const isToday = isSameDay(selectedDate, new Date());
 
   return (
     <div className="space-y-4 md:space-y-6 p-3 md:p-6">
-      {/* Header Premium */}
+      {/* Header */}
       <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-primary via-secondary to-accent p-4 md:p-8 text-white shadow-2xl">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0 mb-4 md:mb-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 md:gap-3 mb-2">
-                <div className="p-2 md:p-3 rounded-xl bg-white/20 backdrop-blur-sm">
-                  <Calendar className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-1 truncate">Agenda Elegante</h1>
-                  <p className="text-white/80 text-sm md:text-base lg:text-lg truncate">
-                    {selectedProfessionalId
-                      ? `Agenda de ${professionals.find(p => p.id === selectedProfessionalId)?.name || 'Profissional'}`
-                      : 'Gerencie seus agendamentos com sofisticação'}
-                  </p>
-                </div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-3 rounded-xl bg-white/20 backdrop-blur-sm">
+                <Calendar className="w-5 h-5 md:w-8 md:h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-1">Agenda Elegante</h1>
+                <p className="text-white/80 text-sm md:text-lg">
+                  {selectedProfessionalId ? `Agenda de ${professionals.find(p => p.id === selectedProfessionalId)?.name || 'Profissional'}` : 'Gerencie seus agendamentos com sofisticação'}
+                </p>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3 w-full md:w-auto">
-              {/* Seletor de Profissional */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
               <select
                 value={selectedProfessionalId}
-                onChange={(e) => setSelectedProfessionalId(e.target.value)}
-                className="h-10 px-3 md:px-4 rounded-lg bg-white/20 hover:bg-white/30 text-white border-2 border-white/30 backdrop-blur-sm shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-white/50 text-sm md:text-base flex-1 sm:flex-none min-w-0"
-                style={{ colorScheme: 'dark' }}
+                onChange={e => setSelectedProfessionalId(e.target.value)}
+                className="h-10 px-3 md:px-4 rounded-lg bg-white/20 hover:bg-white/30 text-white border-2 border-white/30 backdrop-blur-sm shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-white/50 text-sm md:text-base"
               >
-                <option value="" className="bg-primary text-white">Todos os Profissionais</option>
-                {professionals.filter(p => p.isActive !== false).map((professional) => (
-                  <option key={professional.id} value={professional.id} className="bg-primary text-white">
-                    {professional.name}
-                  </option>
+                <option value="">Todos os Profissionais</option>
+                {professionals.filter(p => p.isActive !== false).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
 
-              {/* Dialog de Novo Agendamento */}
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-white/80 hover:bg-white/90 text-foreground border-2 border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all w-full sm:w-auto">
-                    <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                    <span className="hidden sm:inline">Novo Agendamento</span>
-                    <span className="sm:hidden">Novo</span>
+                  <Button className="bg-white/80 hover:bg-white/90 text-foreground border-2 border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all">
+                    <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" /> Novo
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl bg-card border-2 border-primary/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-xl md:text-2xl lg:text-3xl flex items-center gap-2 md:gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-secondary">
-                        <Sparkles className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
-                      </div>
+                    <DialogTitle className="text-xl md:text-2xl flex items-center gap-2">
+                      <Sparkles className="w-5 h-5" />
                       Novo Agendamento
                     </DialogTitle>
-                    <DialogDescription className="text-sm md:text-base">
-                      Crie um novo agendamento para seu cliente
-                    </DialogDescription>
+                    <DialogDescription>Crie um novo agendamento para seu cliente</DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
-                    {/* ... (formulário de novo agendamento - idêntico ao anterior) ... */}
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="clientId" className="text-base font-semibold">Cliente *</Label>
+                      <Label htmlFor="clientId">Cliente *</Label>
                       <select
                         id="clientId"
-                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                         value={formData.clientId}
                         onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
                         required
@@ -680,72 +443,69 @@ export default function AgendaPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="serviceId" className="text-base font-semibold">Serviço *</Label>
+                      <Label htmlFor="serviceId">Serviço *</Label>
                       <select
                         id="serviceId"
-                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                         value={formData.serviceId}
                         onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                         required
                       >
                         <option value="">Selecione um serviço</option>
                         {services.map((service) => (
-                          <option key={service.id} value={service.id}>
-                            {service.name} - R$ {service.price.toFixed(2).replace('.', ',')}
-                          </option>
+                          <option key={service.id} value={service.id}>{service.name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="professionalId" className="text-base font-semibold">Profissional</Label>
+                      <Label htmlFor="professionalId">Profissional</Label>
                       <select
                         id="professionalId"
-                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                         value={formData.professionalId}
                         onChange={(e) => setFormData({ ...formData, professionalId: e.target.value })}
                       >
                         <option value="">Sem profissional específico</option>
-                        {professionals.map((professional) => (
+                        {professionals.filter(p => p.isActive !== false).map((professional) => (
                           <option key={professional.id} value={professional.id}>{professional.name}</option>
                         ))}
                       </select>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="date" className="text-sm md:text-base font-semibold">Data *</Label>
+                        <Label htmlFor="date">Data *</Label>
                         <Input
                           id="date"
                           type="date"
                           value={formData.date || selectedDateString}
                           onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                           required
-                          min={new Date().toISOString().split('T')[0]}
-                          className="h-11 md:h-12 bg-background border-2 border-input focus:border-primary text-sm md:text-base"
+                          className="h-12"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="startTime" className="text-sm md:text-base font-semibold">Horário *</Label>
+                        <Label htmlFor="startTime">Horário *</Label>
                         <Input
                           id="startTime"
                           type="time"
                           value={formData.startTime}
                           onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                           required
-                          className="h-11 md:h-12 bg-background border-2 border-input focus:border-primary text-sm md:text-base"
+                          className="h-12"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="notes" className="text-base font-semibold">Observações</Label>
-                      <textarea
+                      <Label htmlFor="notes">Observações</Label>
+                      <Input
                         id="notes"
-                        className="flex min-h-[100px] w-full rounded-lg border-2 border-input bg-background px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        placeholder="Observações opcionais sobre o agendamento"
+                        placeholder="Observações sobre o agendamento..."
+                        className="h-12"
                       />
                     </div>
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all">
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-primary to-secondary text-white">
                       <Sparkles className="w-5 h-5 mr-2" />
                       Agendar
                     </Button>
@@ -757,25 +517,323 @@ export default function AgendaPage() {
         </div>
       </div>
 
+      {/* Tabs Dia / Mês */}
+      <Tabs value={activeTab} onValueChange={v => {
+        setActiveTab(v as any);
+        if (v === 'month') {
+          setMonthCalendarOpen(true);
+          setCurrentMonth(new Date(selectedDate));
+        }
+      }}>
+        <div className="flex justify-center mb-4">
+          <TabsList className="bg-muted/50 border-2 border-primary/30">
+            <TabsTrigger value="day"><Clock className="w-4 h-4 mr-2" />Dia</TabsTrigger>
+            <TabsTrigger value="month"><Calendar className="w-4 h-4 mr-2" />Mês</TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Calendário Mensal */}
+        <Dialog open={monthCalendarOpen} onOpenChange={o => {
+          setMonthCalendarOpen(o);
+          if (!o) setActiveTab('day');
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="p-4 md:p-6 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b-2 border-primary/20">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-xl md:text-2xl flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => navigateMonth(-1)}>
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                  <Button variant="ghost" size="icon" onClick={() => navigateMonth(1)}>
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </DialogTitle>
+                <DialogDescription>Visualize todos os agendamentos do mês. Clique em um dia para ver a timeline.</DialogDescription>
+              </div>
+            </DialogHeader>
+            <div className="p-4 md:p-6">
+              <div className="grid grid-cols-7 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b-2 border-primary/20">
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                  <div key={day} className="p-3 text-center font-bold text-sm border-r border-primary/20 last:border-r-0">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {getDaysInMonth().map((date, index) => {
+                  if (!date) {
+                    return <div key={index} className="min-h-[100px] border-r border-b border-primary/20 last:border-r-0" />;
+                  }
+                  const dayAppointments = getAppointmentsForDay(date);
+                  const isToday = isSameDay(date, new Date());
+                  const isSelected = isSameDay(date, selectedDate);
+                  return (
+                    <div
+                      key={index}
+                      className={`relative min-h-[100px] p-2 border-r border-b border-primary/20 last:border-r-0 ${
+                        isToday ? 'bg-primary/10' : ''
+                      } ${isSelected ? 'ring-2 ring-primary' : ''} transition-colors cursor-pointer`}
+                      onClick={() => {
+                        setSelectedDate(date);
+                        setMonthCalendarOpen(false);
+                        setActiveTab('day');
+                      }}
+                    >
+                      <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                        {date.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {dayAppointments.slice(0, 2).map((apt) => {
+                          const statusColors = getStatusColor(apt.status);
+                          return (
+                            <div
+                              key={apt.id}
+                              className={`text-[10px] p-1 rounded ${statusColors.bg} ${statusColors.text} truncate border ${statusColors.border}`}
+                              title={`${formatTime(apt.startTime)} - ${apt.client.name} - ${apt.service.name}`}
+                            >
+                              {formatTime(apt.startTime)} {apt.client.name.split(' ')[0]}
+                            </div>
+                          );
+                        })}
+                        {dayAppointments.length > 2 && (
+                          <div className="text-[10px] text-muted-foreground font-semibold">
+                            +{dayAppointments.length - 2} mais
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <TabsContent value="day" className="space-y-4">
+          {/* Navegação de Data */}
+          <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/80 shadow-xl">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between gap-2 md:gap-4">
+                <Button variant="outline" size="icon" onClick={() => navigateDate(-1)} className="h-10 w-10 md:h-12 md:w-12 border-2 border-primary/30 hover:border-primary transition-all">
+                  <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <h2 className="text-lg md:text-2xl font-bold text-foreground">
+                    {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </h2>
+                  {isToday && (
+                    <p className="text-sm text-primary font-semibold mt-1">Hoje</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={goToToday} className="h-10 md:h-12 px-3 md:px-4 text-xs md:text-sm border-2 border-primary/30 hover:border-primary transition-all">
+                    Hoje
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => navigateDate(1)} className="h-10 w-10 md:h-12 md:w-12 border-2 border-primary/30 hover:border-primary transition-all">
+                    <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timeline do Dia */}
+          <div className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/80 shadow-xl overflow-hidden rounded-xl flex flex-col text-card-foreground">
+            <div className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 border-b-2 border-primary/20 pb-6 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 p-4 md:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="leading-none font-semibold text-lg md:text-xl lg:text-2xl flex items-center gap-2 md:gap-3">
+                    <div className="p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-primary to-secondary">
+                      <Clock className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </div>
+                    <span className="hidden sm:inline">Timeline do Dia</span>
+                    <span className="sm:hidden">Timeline</span>
+                  </div>
+                  <div className="text-muted-foreground text-xs md:text-sm lg:text-base mt-1 hidden sm:block">
+                    Visualize todos os agendamentos do dia em uma linha do tempo elegante
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-0">
+              <div className="relative">
+                {/* Linha do tempo atual */}
+                {isToday && (() => {
+                  const now = new Date();
+                  const dayStart = new Date(now);
+                  dayStart.setHours(8, 0, 0, 0);
+                  const minutesSinceStart = (now.getTime() - dayStart.getTime()) / (1000 * 60);
+                  const currentTop = minutesSinceStart * 0.67;
+                  if (currentTop < 0 || currentTop > 560) return null;
+                  return (
+                    <div className="absolute left-20 sm:left-24 md:left-28 right-0 z-20 pointer-events-none" style={{ top: `${currentTop}px` }}>
+                      <div className="relative">
+                        <div className="absolute left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                        <div className="absolute left-0 -top-2.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg flex items-center justify-center">
+                          <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                        </div>
+                        <div className="absolute right-4 -top-3 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold shadow-lg">
+                          {String(now.getHours()).padStart(2, '0')}:{String(now.getMinutes()).padStart(2, '0')}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Timeline com posicionamento absoluto */}
+                <div className="relative" key={`timeline-${selectedDateString}`} style={{ minHeight: '560px' }}>
+                  {/* Linhas de hora (a cada 2 horas) */}
+                  {hourMarkers.map((hour) => {
+                    const isPast = isToday && hour < new Date().getHours();
+                    const isCurrent = isToday && hour === new Date().getHours();
+                    const topPosition = (hour - 8) * 40;
+                    return (
+                      <div key={hour}>
+                        {/* Linha horizontal completa (atrás dos agendamentos) */}
+                        <div
+                          className={`absolute left-20 sm:left-24 md:left-28 right-0 border-t border-border/30 ${isPast ? 'opacity-40' : ''}`}
+                          style={{ top: `${topPosition}px` }}
+                        />
+                        {/* Marcador de hora (área esquerda) */}
+                        <div
+                          className={`absolute left-0 border-t border-border/30 ${isPast ? 'opacity-40' : ''}`}
+                          style={{ 
+                            top: `${topPosition}px`,
+                            width: '80px', // Largura fixa para a área dos marcadores
+                          }}
+                        >
+                          <div className="flex items-center h-[40px] px-3 md:px-5">
+                            <div className={`w-16 sm:w-20 text-sm md:text-base font-bold ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
+                              {String(hour).padStart(2, '0')}:00
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Linha divisória vertical entre marcadores e agendamentos */}
+                  <div className="absolute left-20 sm:left-24 md:left-28 top-0 bottom-0 w-px bg-border/30 z-10" />
+
+                  {/* Agendamentos posicionados absolutamente */}
+                  <div className="absolute left-20 sm:left-24 md:left-28 right-0 top-0 bottom-0 pr-3 md:pr-5" style={{ minHeight: '560px' }}>
+                    {(() => {
+                      const dayAppointments = getDayAppointments();
+                      const columns = organizeOverlappingAppointments(dayAppointments);
+                      return columns.map((column, colIndex) => (
+                        <div
+                          key={`col-${colIndex}`}
+                          className="absolute top-0 bottom-0"
+                          style={{
+                            left: `${colIndex * (90 / Math.max(columns.length, 1))}%`,
+                            width: `${90 / Math.max(columns.length, 1)}%`,
+                            paddingRight: '4px',
+                          }}
+                        >
+                          {column.map((apt) => {
+                            const { top, height } = getAppointmentPosition(apt);
+                            const statusColors = getStatusColor(apt.status);
+                            const categoryGradient = getCategoryGradient(apt.service.category);
+                            const durationMinutes = apt.service.duration;
+                            const durationHours = Math.floor(durationMinutes / 60);
+                            const durationMins = durationMinutes % 60;
+                            const durationText = durationHours > 0
+                              ? `${durationHours}h${durationMins > 0 ? ` ${durationMins}min` : ''}`
+                              : `${durationMinutes}min`;
+
+                            return (
+                              <div
+                                key={apt.id}
+                                className="group absolute left-0 rounded-lg border-2 p-2 overflow-hidden cursor-pointer hover:z-20 transition-all z-10"
+                                style={{
+                                  top: `${top}px`,
+                                  height: `${height}px`,
+                                  minHeight: '35px',
+                                  width: 'calc(100% - 4px)',
+                                  maxWidth: '200px',
+                                  backgroundColor: statusColors.bgStyle || statusColors.bg.replace('/20', '/30'),
+                                  borderColor: statusColors.borderStyle || statusColors.border.replace('/50', '/70'),
+                                }}
+                                onClick={() => handleEdit(apt)}
+                              >
+                                <div className={`absolute inset-0 bg-gradient-to-r ${categoryGradient} opacity-10 rounded-lg`} />
+                                <div className="relative z-10 h-full flex flex-col justify-between">
+                                  {/* Horários de início e fim - Destaque principal */}
+                                  <div className="mb-1.5 pb-1.5 border-b border-primary/20">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-primary flex-shrink-0" />
+                                      <div className="flex-1">
+                                        <div className="text-[10px] font-bold text-primary leading-tight">
+                                          {formatTime(apt.startTime)}
+                                        </div>
+                                        <div className="text-[9px] font-semibold text-muted-foreground leading-tight">
+                                          até {formatTime(apt.endTime)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Cliente e Status */}
+                                  <div className="flex items-start justify-between gap-1.5 mb-1">
+                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                      <User className="w-3 h-3 text-primary flex-shrink-0" />
+                                      <span className="font-bold text-xs text-foreground truncate leading-tight">
+                                        {apt.client.name}
+                                      </span>
+                                    </div>
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${statusColors.text} ${statusColors.bg} border ${statusColors.border} whitespace-nowrap flex-shrink-0`}>
+                                      {getStatusLabel(apt.status).charAt(0)}
+                                    </span>
+                                  </div>
+
+                                  {/* Serviço e Duração */}
+                                  <div className="mb-1">
+                                    <p className="text-[10px] font-semibold text-muted-foreground truncate">
+                                      {apt.service.name}
+                                    </p>
+                                    <span className="text-[9px] font-semibold text-muted-foreground">
+                                      ({durationText})
+                                    </span>
+                                  </div>
+
+                                  {/* Preço */}
+                                  <div className="mt-auto">
+                                    <span className="text-xs font-bold text-primary">
+                                      R$ {apt.service.price.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
       {/* Dialog de Edição */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl bg-card border-2 border-primary/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl md:text-2xl lg:text-3xl flex items-center gap-2 md:gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-secondary">
-                <Sparkles className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
-              </div>
+            <DialogTitle className="text-xl md:text-2xl flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
               Editar Agendamento
             </DialogTitle>
-            <DialogDescription className="text-sm md:text-base">Atualize as informações do agendamento</DialogDescription>
+            <DialogDescription>Edite as informações do agendamento</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
-            {/* Formulário de edição (igual ao anterior, com campos "edit-") */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-clientId" className="text-base font-semibold">Cliente *</Label>
+              <Label htmlFor="edit-clientId">Cliente *</Label>
               <select
                 id="edit-clientId"
-                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                 value={formData.clientId}
                 onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
                 required
@@ -787,68 +845,65 @@ export default function AgendaPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-serviceId" className="text-base font-semibold">Serviço *</Label>
+              <Label htmlFor="edit-serviceId">Serviço *</Label>
               <select
                 id="edit-serviceId"
-                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                 value={formData.serviceId}
                 onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                 required
               >
                 <option value="">Selecione um serviço</option>
                 {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} - R$ {service.price.toFixed(2).replace('.', ',')}
-                  </option>
+                  <option key={service.id} value={service.id}>{service.name}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-professionalId" className="text-base font-semibold">Profissional</Label>
+              <Label htmlFor="edit-professionalId">Profissional</Label>
               <select
                 id="edit-professionalId"
-                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                 value={formData.professionalId}
                 onChange={(e) => setFormData({ ...formData, professionalId: e.target.value })}
               >
                 <option value="">Sem profissional específico</option>
-                {professionals.map((professional) => (
+                {professionals.filter(p => p.isActive !== false).map((professional) => (
                   <option key={professional.id} value={professional.id}>{professional.name}</option>
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-date" className="text-sm md:text-base font-semibold">Data *</Label>
+                <Label htmlFor="edit-date">Data *</Label>
                 <Input
                   id="edit-date"
                   type="date"
-                  value={formData.date}
+                  value={formData.date || selectedDateString}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
-                  className="h-11 md:h-12 bg-background border-2 border-input focus:border-primary text-sm md:text-base"
+                  className="h-12"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-startTime" className="text-sm md:text-base font-semibold">Horário *</Label>
+                <Label htmlFor="edit-startTime">Horário *</Label>
                 <Input
                   id="edit-startTime"
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                   required
-                  className="h-11 md:h-12 bg-background border-2 border-input focus:border-primary text-sm md:text-base"
+                  className="h-12"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-status" className="text-base font-semibold">Status *</Label>
+              <Label htmlFor="edit-status">Status</Label>
               <select
                 id="edit-status"
-                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="flex h-12 w-full rounded-lg border-2 border-input bg-background px-4 py-2"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                required
               >
                 <option value="PENDING">Pendente</option>
                 <option value="CONFIRMED">Confirmado</option>
@@ -857,44 +912,22 @@ export default function AgendaPage() {
                 <option value="CANCELLED">Cancelado</option>
                 <option value="NO_SHOW">Falta</option>
               </select>
-              {formData.status === 'COMPLETED' && (
-                <p className="text-xs text-green-500 mt-1">
-                  Ao marcar como concluído, uma transação de receita será criada automaticamente
-                </p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-notes" className="text-base font-semibold">Observações</Label>
-              <textarea
+              <Label htmlFor="edit-notes">Observações</Label>
+              <Input
                 id="edit-notes"
-                className="flex min-h-[100px] w-full rounded-lg border-2 border-input bg-background px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Observações opcionais sobre o agendamento"
+                placeholder="Observações sobre o agendamento..."
+                className="h-12"
               />
             </div>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setEditOpen(false);
-                  setEditingAppointment(null);
-                  setFormData({
-                    clientId: '',
-                    serviceId: '',
-                    professionalId: '',
-                    date: '',
-                    startTime: '',
-                    notes: '',
-                    status: 'PENDING',
-                  });
-                }}
-              >
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="flex-1 h-12">
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl transition-all">
+              <Button type="submit" className="flex-1 h-12 bg-gradient-to-r from-primary to-secondary text-white">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Salvar Alterações
               </Button>
@@ -903,387 +936,26 @@ export default function AgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Confirmação de Exclusão */}
+      {/* Dialog de Exclusão */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja deletar o agendamento de <strong>{deletingAppointment?.client.name}</strong>?
-              Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setDeleteOpen(false);
-                setDeletingAppointment(null);
-              }}
-            >
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button type="button" variant="destructive" onClick={handleDelete}>
-              Deletar
+            <Button variant="destructive" onClick={handleDelete} className="flex-1">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Tabs para Dia/Mês */}
-      <Tabs 
-        value={activeTab} 
-        onValueChange={(value) => {
-          const newTab = value as 'day' | 'month';
-          setActiveTab(newTab);
-          if (newTab === 'month') {
-            setMonthCalendarOpen(true);
-            setCurrentMonth(new Date(selectedDate));
-          }
-        }}
-      >
-        <div className="flex justify-center mb-4">
-          <TabsList className="bg-muted/50 border-2 border-primary/30">
-            <TabsTrigger value="day" className="px-6">
-              <Clock className="w-4 h-4 mr-2" />
-              Dia
-            </TabsTrigger>
-            <TabsTrigger value="month" className="px-6">
-              <Calendar className="w-4 h-4 mr-2" />
-              Mês
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Dialog do Calendário Mensal */}
-        <Dialog open={monthCalendarOpen} onOpenChange={(open) => {
-          setMonthCalendarOpen(open);
-          if (!open) {
-            setActiveTab('day');
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">
-                Agendamentos do Mês
-              </DialogTitle>
-              <DialogDescription>
-                Visualize todos os agendamentos do mês em um calendário completo
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {/* Navegação do Mês */}
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateMonth(-1)}
-                  className="h-10 w-10"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h3 className="text-xl font-bold">
-                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                </h3>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateMonth(1)}
-                  className="h-10 w-10"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Calendário */}
-              <div className="border-2 border-primary/30 rounded-lg overflow-hidden">
-                {/* Cabeçalho dos dias da semana */}
-                <div className="grid grid-cols-7 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b-2 border-primary/20">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                    <div key={day} className="p-3 text-center font-bold text-sm border-r border-primary/20 last:border-r-0">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Dias do mês */}
-                <div className="grid grid-cols-7">
-                  {getDaysInMonth().map((date, index) => {
-                    if (!date) {
-                      return <div key={index} className="min-h-[100px] border-r border-b border-primary/20 last:border-r-0" />;
-                    }
-
-                    const dayAppointments = getAppointmentsForDay(date);
-                    const isToday = isSameDay(date, new Date());
-                    const isSelected = isSameDay(date, selectedDate);
-
-                    return (
-                      <div
-                        key={index}
-                        className={`relative min-h-[100px] p-2 border-r border-b border-primary/20 last:border-r-0 ${
-                          isToday ? 'bg-primary/10' : ''
-                        } ${isSelected ? 'ring-2 ring-primary' : ''} hover:bg-primary/5 transition-colors`}
-                      >
-                        <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary' : 'text-foreground'}`}>
-                          {date.getDate()}
-                        </div>
-                        <div 
-                          className="space-y-1 cursor-pointer"
-                          onClick={() => {
-                            setSelectedDate(date);
-                            setMonthCalendarOpen(false);
-                            setActiveTab('day');
-                          }}
-                        >
-                          {dayAppointments.slice(0, 2).map((apt) => {
-                            const statusColors = getStatusColor(apt.status);
-                            return (
-                              <div
-                                key={apt.id}
-                                className={`text-[10px] p-1 rounded ${statusColors.bg} ${statusColors.text} truncate hover:opacity-80 border ${statusColors.border}`}
-                                title={`${formatTime(apt.startTime)} - ${apt.client.name} - ${apt.service.name}`}
-                              >
-                                {formatTime(apt.startTime)} {apt.client.name.split(' ')[0]}
-                              </div>
-                            );
-                          })}
-                          {dayAppointments.length > 2 && (
-                            <div className="text-[10px] text-muted-foreground font-semibold hover:text-primary">
-                              +{dayAppointments.length - 2} mais
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <TabsContent value="day" className="space-y-4">
-      {/* Navegação de Data */}
-      <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/80 shadow-lg">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex items-center justify-between gap-2 md:gap-4">
-            <Button variant="outline" size="icon" onClick={() => navigateDate(-1)} className="h-10 w-10 md:h-12 md:w-12 border-2 border-primary/30 hover:border-primary hover:bg-primary/10 hover:text-foreground transition-all flex-shrink-0">
-              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-            </Button>
-            <div className="text-center flex-1 min-w-0">
-              <h2 className="text-lg md:text-2xl lg:text-3xl font-bold mb-1 px-2">
-                <span className="hidden md:inline">
-                  {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </span>
-                <span className="md:hidden">
-                  {selectedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                </span>
-              </h2>
-              {isToday && (
-                <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30">
-                  <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                  <span className="text-xs md:text-sm font-semibold text-primary">Hoje</span>
-                </div>
-              )}
-              <p className="text-xs md:text-sm text-muted-foreground mt-2">
-                {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''} programado{appointments.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <Button variant="outline" onClick={goToToday} className="h-10 md:h-12 px-3 md:px-4 text-xs md:text-sm border-2 border-primary/30 hover:border-primary hover:bg-primary/10 hover:text-foreground transition-all">
-                <span className="hidden sm:inline">Hoje</span>
-                <span className="sm:hidden">Hoje</span>
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => navigateDate(1)} className="h-10 w-10 md:h-12 md:w-12 border-2 border-primary/30 hover:border-primary hover:bg-primary/10 hover:text-foreground transition-all">
-                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Timeline do Dia */}
-      <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/80 shadow-xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b-2 border-primary/20 p-4 md:p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg md:text-xl lg:text-2xl flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-primary to-secondary">
-                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                </div>
-                <span className="hidden sm:inline">Timeline do Dia</span>
-                <span className="sm:hidden">Timeline</span>
-              </CardTitle>
-              <CardDescription className="text-xs md:text-sm lg:text-base mt-1 hidden sm:block">
-                Visualize todos os agendamentos do dia em uma linha do tempo elegante
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="relative">
-            {/* Linha do tempo atual */}
-            {isToday && currentTimePosition !== null && (
-              <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: `${currentTimePosition}px` }}>
-                <div className="relative">
-                  <div className="absolute left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                  <div className="absolute -left-3 -top-2.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg flex items-center justify-center">
-                    <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
-                  </div>
-                  <div className="absolute right-4 -top-3 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold shadow-lg">
-                    {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="divide-y divide-border/30" key={`timeline-${selectedDateString}`}>
-              {hours.map((hour) => {
-                const hourAppointments = getAppointmentsForHour(hour);
-                // Para datas futuras, não considerar como "past" ou "current"
-                const isPast = isToday && hour < currentHour;
-                const isCurrent = isToday && hour === currentHour;
-
-                return (
-                  <div
-                    key={hour}
-                    className={`relative min-h-[80px] md:min-h-[100px] grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-5 ${isPast ? 'opacity-60' : ''} ${isCurrent ? 'bg-primary/5' : ''}`}
-                  >
-                    <div className="col-span-2 sm:col-span-1 flex items-center">
-                      <div className={`text-sm md:text-base lg:text-lg font-bold ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {String(hour).padStart(2, '0')}:00
-                      </div>
-                    </div>
-
-                    <div className="col-span-10 sm:col-span-11 relative">
-                      {hourAppointments.length > 0 ? (
-                        <div className="space-y-3">
-                          {hourAppointments.map((apt) => {
-                            const statusColors = getStatusColor(apt.status);
-                            const categoryGradient = getCategoryGradient(apt.service.category);
-                            const categoryIcon = getCategoryIcon(apt.service.category);
-
-                            return (
-                              <div
-                                key={apt.id}
-                                className={`group relative rounded-xl p-4 border-2 ${statusColors.border} ${statusColors.bg} hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer`}
-                              >
-                                <div className={`absolute inset-0 bg-gradient-to-r ${categoryGradient} opacity-10 rounded-xl`} />
-
-                                <div className="relative z-10">
-                                  <div className="flex items-start justify-between mb-2 md:mb-3 gap-2">
-                                    <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                                      <div className={`text-lg md:text-xl lg:text-2xl p-1.5 md:p-2 rounded-lg bg-gradient-to-br ${categoryGradient} bg-opacity-20 flex-shrink-0`}>
-                                        {categoryIcon}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1 md:gap-2 mb-1">
-                                          <User className="w-3 h-3 md:w-4 md:h-4 text-primary flex-shrink-0" />
-                                          <span className="font-bold text-sm md:text-base truncate">{apt.client.name}</span>
-                                        </div>
-                                        <p className="text-xs md:text-sm font-semibold text-foreground mb-1 truncate">{apt.service.name}</p>
-                                      </div>
-                                    </div>
-                                    <span className={`px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs font-bold ${statusColors.text} ${statusColors.bg} border-2 ${statusColors.border} whitespace-nowrap flex-shrink-0`}>
-                                      {getStatusLabel(apt.status)}
-                                    </span>
-                                  </div>
-
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4 flex-wrap">
-                                    <div className="flex items-center gap-1 md:gap-1.5 text-xs md:text-sm">
-                                      <Clock className="w-3 h-3 md:w-4 md:h-4 text-primary flex-shrink-0" />
-                                      <span className="font-medium">
-                                        {formatTime(apt.startTime)} - {formatTime(apt.endTime)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 md:gap-1.5 text-xs md:text-sm">
-                                      <span className="font-bold text-primary">
-                                        R$ {apt.service.price.toFixed(2).replace('.', ',')}
-                                      </span>
-                                    </div>
-                                    {apt.professional && (
-                                      <div className="flex items-center gap-1 md:gap-1.5 text-xs md:text-sm text-muted-foreground">
-                                        <User className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                        <span className="truncate">{apt.professional.name}</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {apt.notes && (
-                                    <div className="mt-3 pt-3 border-t border-border/30">
-                                      <p className="text-xs text-muted-foreground italic flex items-start gap-2">
-                                        <span>📝</span>
-                                        <span>{apt.notes}</span>
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border/30 flex flex-wrap gap-1.5 md:gap-2">
-                                    {apt.status === 'PENDING' && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleConfirm(apt.id)}
-                                        className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-0 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border-blue-500/30 hover:border-blue-500/50 text-xs"
-                                      >
-                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                        <span className="hidden sm:inline">Confirmar</span>
-                                        <span className="sm:hidden">OK</span>
-                                      </Button>
-                                    )}
-                                    {(apt.status === 'CONFIRMED' || apt.status === 'IN_PROGRESS') && !apt.transaction && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleComplete(apt.id)}
-                                        className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-0 bg-green-500/10 hover:bg-green-500/20 text-green-600 border-green-500/30 hover:border-green-500/50 text-xs"
-                                      >
-                                        <BadgeDollarSign className="w-3 h-3 mr-1" />
-                                        <span className="hidden sm:inline">Concluir</span>
-                                        <span className="sm:hidden">✓</span>
-                                      </Button>
-                                    )}
-                                    <Button variant="outline" size="sm" onClick={() => handleEdit(apt)} className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-0 text-xs">
-                                      <Pencil className="w-3 h-3 mr-1" />
-                                      <span className="hidden sm:inline">Editar</span>
-                                      <span className="sm:hidden">✎</span>
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        setDeletingAppointment(apt);
-                                        setDeleteOpen(true);
-                                      }}
-                                      className="flex-1 min-w-[calc(50%-0.25rem)] sm:min-w-0 text-xs"
-                                    >
-                                      <Trash2 className="w-3 h-3 mr-1" />
-                                      <span className="hidden sm:inline">Deletar</span>
-                                      <span className="sm:hidden">🗑</span>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground/50 italic py-4">
-                          Sem agendamentos neste horário
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

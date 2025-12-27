@@ -73,11 +73,39 @@ model Client {
   appointments  Appointment[]
   transactions  Transaction[]
   packages      ClientPackage[]
+  history       ClientHistory[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
   @@map("clients")
+}
+
+// Histórico do Cliente (anotações, reclamações, observações)
+model ClientHistory {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  type          HistoryType @default(NOTE) // NOTE, COMPLAINT, PRAISE, WARNING, APPOINTMENT
+  title         String?
+  description   String
+  createdBy     String? // ID do usuário que criou (opcional)
+  
+  // Relacionamento com agendamento (se for histórico automático de atendimento)
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  
+  // Informações do atendimento (quando type = APPOINTMENT)
+  serviceName   String? // Nome do serviço realizado
+  professionalName String? // Nome do profissional que atendeu
+  servicePrice  Float? // Preço do serviço
+  serviceDuration Int? // Duração em minutos
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("client_history")
 }
 
 // Profissional/Equipe do salão
@@ -228,6 +256,7 @@ model Appointment {
   establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   
   transaction   Transaction?
+  history       ClientHistory[] // Histórico gerado automaticamente quando completado
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -364,4 +393,12 @@ enum AppointmentSource {
 enum TransactionType {
   INCOME
   EXPENSE
+}
+
+enum HistoryType {
+  NOTE        // Anotação geral
+  COMPLAINT   // Reclamação
+  PRAISE      // Elogio
+  WARNING     // Aviso/Advertência
+  APPOINTMENT // Atendimento realizado (gerado automaticamente)
 }

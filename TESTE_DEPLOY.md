@@ -261,3 +261,4 @@ NEXT_PUBLIC_API_URL=https://beautyflow-backend.onrender.com
 5. ✅ Fazer push para GitHub
 6. ✅ Configurar CI/CD (opcional)
 
+

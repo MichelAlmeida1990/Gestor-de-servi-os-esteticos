@@ -159,6 +159,11 @@ export async function authRoutes(fastify: FastifyInstance) {
             error: 'Erro ao conectar com o banco de dados. Verifique se o banco está rodando.',
           });
         }
+        if (prismaError.code === 'P2002') {
+          return reply.status(400).send({
+            error: 'Email já cadastrado',
+          });
+        }
       }
       
       if (error instanceof z.ZodError) {
@@ -168,9 +173,14 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
       
+      // Log detalhado do erro para debug
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Erro detalhado no login:', { errorMessage, errorStack, error });
+      
       return reply.status(500).send({
         error: 'Erro ao fazer login',
-        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        message: errorMessage,
       });
     }
   });
@@ -206,9 +216,25 @@ export async function authRoutes(fastify: FastifyInstance) {
       });
     } catch (error) {
       console.error('Erro em /auth/me:', error);
+      
+      // Tratamento específico para erros do Prisma
+      if (error && typeof error === 'object' && 'code' in error) {
+        const prismaError = error as { code: string; message: string };
+        if (prismaError.code === 'P1001') {
+          return reply.status(500).send({
+            error: 'Erro ao conectar com o banco de dados. Verifique se o banco está rodando.',
+          });
+        }
+      }
+      
+      // Log detalhado do erro para debug
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Erro detalhado em /auth/me:', { errorMessage, errorStack, error });
+      
       return reply.status(500).send({
         error: 'Erro ao buscar usuário',
-        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        message: errorMessage,
       });
     }
   });

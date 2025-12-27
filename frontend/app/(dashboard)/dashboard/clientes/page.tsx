@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { API_URL } from '@/lib/api';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, History, Plus, AlertCircle, MessageSquare, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Client {
   id: string;
@@ -25,6 +26,31 @@ interface Client {
   phone: string;
   birthDate: string | null;
   createdAt: string;
+  history?: ClientHistory[];
+}
+
+interface ClientHistory {
+  id: string;
+  type: 'NOTE' | 'COMPLAINT' | 'PRAISE' | 'WARNING' | 'APPOINTMENT';
+  title: string | null;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  appointmentId?: string | null;
+  serviceName?: string | null;
+  professionalName?: string | null;
+  servicePrice?: number | null;
+  serviceDuration?: number | null;
+}
+
+interface ClientStats {
+  totalAppointments: number;
+  totalSpent: number;
+  mostUsedServices: Array<{ name: string; count: number; totalSpent: number }>;
+  mostUsedProfessionals: Array<{ name: string; count: number }>;
+  lastVisit: string | null;
+  firstVisit: string | null;
+  avgDaysBetweenVisits: number | null;
 }
 
 export default function ClientesPage() {
@@ -43,6 +69,13 @@ export default function ClientesPage() {
     birthDate: '',
     address: '',
     notes: '',
+  });
+  const [clientHistory, setClientHistory] = useState<ClientHistory[]>([]);
+  const [clientStats, setClientStats] = useState<ClientStats | null>(null);
+  const [historyForm, setHistoryForm] = useState({
+    type: 'NOTE' as 'NOTE' | 'COMPLAINT' | 'PRAISE' | 'WARNING',
+    title: '',
+    description: '',
   });
 
   useEffect(() => {
@@ -124,6 +157,80 @@ export default function ClientesPage() {
     }
   };
 
+  const loadClientHistory = async (clientId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const [historyResponse, statsResponse] = await Promise.all([
+        fetch(`${API_URL}/clients/${clientId}/history`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${API_URL}/clients/${clientId}/stats`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        setClientHistory(historyData.history || []);
+      }
+
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setClientStats(statsData.stats || null);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    }
+  };
+
+  const handleAddHistory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClient) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/clients/${editingClient.id}/history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(historyForm),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Histórico adicionado!',
+          description: 'A entrada foi adicionada ao histórico do cliente.',
+          variant: 'success',
+        });
+        setHistoryForm({
+          type: 'NOTE',
+          title: '',
+          description: '',
+        });
+        loadClientHistory(editingClient.id);
+      } else {
+        const data = await response.json();
+        toast({
+          title: 'Erro',
+          description: data.error || 'Erro ao adicionar histórico',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao adicionar histórico',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleEdit = (client: Client) => {
     setEditingClient(client);
     setFormData({
@@ -135,6 +242,7 @@ export default function ClientesPage() {
       notes: '',
     });
     setEditOpen(true);
+    loadClientHistory(client.id);
   };
 
   const handleDelete = async () => {
@@ -255,12 +363,22 @@ export default function ClientesPage() {
 
         {/* Dialog de Edição */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Editar Cliente</DialogTitle>
-              <DialogDescription>Atualize os dados do cliente</DialogDescription>
+              <DialogTitle>Editar Cliente - {editingClient?.name}</DialogTitle>
+              <DialogDescription>Gerencie os dados e histórico do cliente</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <Tabs defaultValue="dados" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="dados">Dados</TabsTrigger>
+                <TabsTrigger value="historico">
+                  <History className="w-4 h-4 mr-2" />
+                  Histórico
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="dados" className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Nome *</Label>
                 <Input
@@ -313,24 +431,275 @@ export default function ClientesPage() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => {
-                  setEditOpen(false);
-                  setEditingClient(null);
-                  setFormData({
-                    name: '',
-                    email: '',
-                    phone: '',
-                    birthDate: '',
-                    address: '',
-                    notes: '',
-                  });
-                }}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="flex-1">Salvar Alterações</Button>
-              </div>
-            </form>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => {
+                      setEditOpen(false);
+                      setEditingClient(null);
+                      setFormData({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        birthDate: '',
+                        address: '',
+                        notes: '',
+                      });
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="flex-1">Salvar Alterações</Button>
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="historico" className="space-y-4">
+                {/* Estatísticas do Cliente */}
+                {clientStats && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Estatísticas do Cliente</CardTitle>
+                      <CardDescription>Resumo de atendimentos e histórico</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                          <div className="text-2xl font-bold text-primary">{clientStats.totalAppointments}</div>
+                          <div className="text-sm text-muted-foreground">Total de Atendimentos</div>
+                        </div>
+                        <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <div className="text-2xl font-bold text-green-600">
+                            R$ {clientStats.totalSpent.toFixed(2).replace('.', ',')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total Gasto</div>
+                        </div>
+                        {clientStats.lastVisit && (
+                          <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <div className="text-sm font-bold text-blue-600">
+                              {new Date(clientStats.lastVisit).toLocaleDateString('pt-BR')}
+                            </div>
+                            <div className="text-sm text-muted-foreground">Última Visita</div>
+                          </div>
+                        )}
+                        {clientStats.avgDaysBetweenVisits && (
+                          <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <div className="text-2xl font-bold text-purple-600">{clientStats.avgDaysBetweenVisits}</div>
+                            <div className="text-sm text-muted-foreground">Dias entre Visitas</div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {clientStats.mostUsedServices.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-semibold mb-2">Serviços Mais Utilizados</h4>
+                          <div className="space-y-2">
+                            {clientStats.mostUsedServices.map((service, index) => (
+                              <div key={index} className="flex justify-between items-center p-2 rounded bg-muted/50">
+                                <span className="text-sm">{service.name}</span>
+                                <div className="flex gap-4 text-sm">
+                                  <span className="text-muted-foreground">{service.count}x</span>
+                                  <span className="font-semibold">R$ {service.totalSpent.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {clientStats.mostUsedProfessionals.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-semibold mb-2">Profissionais Mais Utilizados</h4>
+                          <div className="space-y-2">
+                            {clientStats.mostUsedProfessionals.map((prof, index) => (
+                              <div key={index} className="flex justify-between items-center p-2 rounded bg-muted/50">
+                                <span className="text-sm">{prof.name}</span>
+                                <span className="text-sm text-muted-foreground">{prof.count} atendimentos</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Formulário para adicionar histórico */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Adicionar ao Histórico</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddHistory} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="history-type">Tipo</Label>
+                        <select
+                          id="history-type"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                          value={historyForm.type}
+                          onChange={(e) => setHistoryForm({ ...historyForm, type: e.target.value as any })}
+                        >
+                          <option value="NOTE">Anotação</option>
+                          <option value="COMPLAINT">Reclamação</option>
+                          <option value="PRAISE">Elogio</option>
+                          <option value="WARNING">Aviso</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="history-title">Título (opcional)</Label>
+                        <Input
+                          id="history-title"
+                          value={historyForm.title}
+                          onChange={(e) => setHistoryForm({ ...historyForm, title: e.target.value })}
+                          placeholder="Ex: Reclamação sobre atendimento"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="history-description">Descrição *</Label>
+                        <textarea
+                          id="history-description"
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                          value={historyForm.description}
+                          onChange={(e) => setHistoryForm({ ...historyForm, description: e.target.value })}
+                          required
+                          placeholder="Descreva a situação, reclamação, elogio ou observação..."
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar ao Histórico
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Lista de histórico */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Histórico do Cliente</CardTitle>
+                    <CardDescription>
+                      {clientHistory.length === 0 
+                        ? 'Nenhuma entrada no histórico ainda' 
+                        : `${clientHistory.length} ${clientHistory.length === 1 ? 'entrada' : 'entradas'} no histórico`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {clientHistory.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          Nenhuma entrada no histórico. Adicione uma acima para começar.
+                        </p>
+                      ) : (
+                        clientHistory.map((entry) => {
+                          const getTypeIcon = () => {
+                            switch (entry.type) {
+                              case 'COMPLAINT':
+                                return <AlertCircle className="w-4 h-4 text-red-500" />;
+                              case 'PRAISE':
+                                return <ThumbsUp className="w-4 h-4 text-green-500" />;
+                              case 'WARNING':
+                                return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+                              case 'APPOINTMENT':
+                                return <History className="w-4 h-4 text-purple-500" />;
+                              default:
+                                return <MessageSquare className="w-4 h-4 text-blue-500" />;
+                            }
+                          };
+
+                          const getTypeLabel = () => {
+                            switch (entry.type) {
+                              case 'COMPLAINT':
+                                return 'Reclamação';
+                              case 'PRAISE':
+                                return 'Elogio';
+                              case 'WARNING':
+                                return 'Aviso';
+                              case 'APPOINTMENT':
+                                return 'Atendimento';
+                              default:
+                                return 'Anotação';
+                            }
+                          };
+
+                          const getTypeColor = () => {
+                            switch (entry.type) {
+                              case 'COMPLAINT':
+                                return 'border-red-500/30 bg-red-500/10';
+                              case 'PRAISE':
+                                return 'border-green-500/30 bg-green-500/10';
+                              case 'WARNING':
+                                return 'border-yellow-500/30 bg-yellow-500/10';
+                              case 'APPOINTMENT':
+                                return 'border-purple-500/30 bg-purple-500/10';
+                              default:
+                                return 'border-blue-500/30 bg-blue-500/10';
+                            }
+                          };
+
+                          return (
+                            <div
+                              key={entry.id}
+                              className={`p-4 rounded-lg border ${getTypeColor()}`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2 flex-1">
+                                  {getTypeIcon()}
+                                  <span className="font-semibold text-sm">{getTypeLabel()}</span>
+                                  {entry.title && (
+                                    <span className="text-sm text-muted-foreground">- {entry.title}</span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {new Date(entry.createdAt).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              
+                              {entry.type === 'APPOINTMENT' && (
+                                <div className="mb-2 p-2 rounded bg-background/50 border border-border/50">
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    {entry.serviceName && (
+                                      <div>
+                                        <span className="text-muted-foreground">Serviço: </span>
+                                        <span className="font-semibold">{entry.serviceName}</span>
+                                      </div>
+                                    )}
+                                    {entry.professionalName && (
+                                      <div>
+                                        <span className="text-muted-foreground">Profissional: </span>
+                                        <span className="font-semibold">{entry.professionalName}</span>
+                                      </div>
+                                    )}
+                                    {entry.servicePrice && (
+                                      <div>
+                                        <span className="text-muted-foreground">Valor: </span>
+                                        <span className="font-semibold text-green-600">
+                                          R$ {entry.servicePrice.toFixed(2).replace('.', ',')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {entry.serviceDuration && (
+                                      <div>
+                                        <span className="text-muted-foreground">Duração: </span>
+                                        <span className="font-semibold">{entry.serviceDuration} min</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <p className="text-sm text-foreground whitespace-pre-wrap">{entry.description}</p>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
 

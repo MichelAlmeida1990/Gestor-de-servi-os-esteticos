@@ -38,6 +38,17 @@ export default function Home() {
     const token = localStorage.getItem('token');
     if (token) {
       router.push('/dashboard');
+      return;
+    }
+
+    // Se a URL tiver #login, fazer scroll até o formulário
+    if (window.location.hash === '#login') {
+      setTimeout(() => {
+        const loginElement = document.getElementById('login');
+        if (loginElement) {
+          loginElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
   }, [router]);
 
@@ -156,7 +167,7 @@ export default function Home() {
                   Criar Conta Grátis
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="#login">
                 <Button className="bg-gradient-to-r from-primary to-secondary text-white">
                   Entrar
                 </Button>
@@ -229,7 +240,7 @@ export default function Home() {
           </div>
 
           {/* Right: Login Card */}
-          <div className="relative">
+          <div id="login" className="relative scroll-mt-20">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-3xl transform rotate-6"></div>
             <Card className="relative glass-card border-2 border-pink-600/30 shadow-2xl">
               <CardContent className="p-6">
@@ -421,7 +432,7 @@ export default function Home() {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="#login">
                 <Button size="lg" variant="outline" className="border-2 border-white/30 text-white hover:bg-white/10 h-14 px-8 text-lg">
                   Já tenho conta
               </Button>

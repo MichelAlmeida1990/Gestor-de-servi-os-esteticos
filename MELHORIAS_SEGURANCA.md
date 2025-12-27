@@ -332,3 +332,4 @@ if (isTokenExpired(token)) {
 - **UX:** Algumas melhorias (senhas fortes) podem impactar UX, mas melhoram segurança
 - **Manutenção:** Logs de auditoria aumentam volume de dados, considerar retenção
 
+

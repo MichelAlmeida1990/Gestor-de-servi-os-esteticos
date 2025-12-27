@@ -338,3 +338,4 @@ fetch(`${API_URL}/auth/login`, ...)
 5. Testar todas as funcionalidades
 6. Configurar domínio customizado (opcional)
 
+
