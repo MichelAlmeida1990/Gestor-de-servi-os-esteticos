@@ -16,6 +16,13 @@ const nextConfig = {
     };
     return config;
   },
+  
+  // Configuração Turbopack (Next.js 16+ usa Turbopack por padrão)
+  turbopack: {
+    resolveAlias: {
+      '@': path.resolve(__dirname, '.'),
+    },
+  },
 };
 
 export default nextConfig;
