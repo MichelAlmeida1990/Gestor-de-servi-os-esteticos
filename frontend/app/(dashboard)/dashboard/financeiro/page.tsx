@@ -52,22 +52,22 @@ interface Summary {
 }
 
 // Função auxiliar para formatar data corretamente considerando timezone
-const formatDate = (dateString: string, showTime: boolean = true) => {
+const formatDate = (dateString: string, showTime: boolean = true): string | { date: string; time: string } => {
   const date = new Date(dateString);
-  // Ajustar para timezone local
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  
-  const dateStr = localDate.toLocaleDateString('pt-BR', {
+  // Usar timezone do Brasil (America/Sao_Paulo) para exibir corretamente
+  const dateStr = date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'America/Sao_Paulo',
   });
   
   if (!showTime) return dateStr;
   
-  const timeStr = localDate.toLocaleTimeString('pt-BR', {
+  const timeStr = date.toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
   });
   
   return { date: dateStr, time: timeStr };
@@ -577,7 +577,11 @@ export default function FinanceiroPage() {
                           const dateToShow = transaction.appointment 
                             ? transaction.appointment.startTime 
                             : transaction.createdAt;
-                          const formatted = formatDate(dateToShow);
+                          const formatted = formatDate(dateToShow, true);
+                          // Type guard para garantir que é objeto
+                          if (typeof formatted === 'string') {
+                            return <span className="text-sm font-medium">{formatted}</span>;
+                          }
                           return (
                             <>
                               <span className="text-sm font-medium">{formatted.date}</span>
