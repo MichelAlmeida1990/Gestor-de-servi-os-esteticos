@@ -6,8 +6,8 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração mínima para evitar erros de enum
   reactStrictMode: true,
+  
   // Configuração para resolver path aliases corretamente durante o build
   webpack: (config) => {
     config.resolve.alias = {
@@ -19,7 +19,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-
-
-
-

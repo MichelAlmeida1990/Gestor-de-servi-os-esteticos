@@ -4,7 +4,7 @@
   "description": "BeautyFlow - Backend API para sistema de gestão de salões de beleza",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/index.ts",
+    "dev": "nodemon --exec npx tsx src/index.ts",
     "build": "tsc --skipLibCheck",
     "start": "node dist/index.js",
     "postinstall": "prisma generate",

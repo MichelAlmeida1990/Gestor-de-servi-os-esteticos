@@ -333,3 +333,6 @@ if (isTokenExpired(token)) {
 - **Manutenção:** Logs de auditoria aumentam volume de dados, considerar retenção
 
 
+
+
+

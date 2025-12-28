@@ -243,6 +243,7 @@ export default function AgendaPage() {
       const date = formData.date || selectedDateString;
       const [y, m, d] = date.split('-').map(Number);
       const [h, min] = formData.startTime.split(':').map(Number);
+      // Criar data local (será convertida para UTC pelo toISOString())
       const localDate = new Date(y, m - 1, d, h, min);
       const iso = localDate.toISOString();
 
@@ -276,13 +277,23 @@ export default function AgendaPage() {
 
   const handleEdit = (apt: Appointment) => {
     const start = new Date(apt.startTime);
+    // Converter para timezone local do Brasil usando toLocaleString
+    const localTimeString = start.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+    const localDate = new Date(localTimeString);
+    
+    const year = localDate.getFullYear();
+    const month = localDate.getMonth();
+    const day = localDate.getDate();
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes();
+    
     setEditingAppointment(apt);
     setFormData({
       clientId: apt.client.id,
       serviceId: apt.service.id,
       professionalId: apt.professional?.id || '',
-      date: start.toISOString().split('T')[0],
-      startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
+      date: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      startTime: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
       notes: apt.notes || '',
       status: apt.status as any,
     });
@@ -308,19 +319,22 @@ export default function AgendaPage() {
 
   const formatTime = (date: string) => {
     const dateObj = new Date(date);
-    // Ajustar para timezone local para evitar problemas de conversão
-    const localDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000);
-    return localDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // Usar timezone do Brasil (America/Sao_Paulo) para exibir corretamente
+    return dateObj.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
+    });
   };
   
   const formatDate = (date: string) => {
     const dateObj = new Date(date);
-    // Ajustar para timezone local
-    const localDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000);
-    return localDate.toLocaleDateString('pt-BR', { 
+    // Usar timezone do Brasil (America/Sao_Paulo) para exibir corretamente
+    return dateObj.toLocaleDateString('pt-BR', { 
       day: '2-digit', 
       month: '2-digit', 
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 

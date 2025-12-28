@@ -262,3 +262,6 @@ NEXT_PUBLIC_API_URL=https://beautyflow-backend.onrender.com
 6. ✅ Configurar CI/CD (opcional)
 
 
+
+
+

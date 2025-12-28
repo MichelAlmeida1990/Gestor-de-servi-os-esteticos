@@ -327,3 +327,6 @@ O projeto está em um **bom estágio de desenvolvimento**, com as funcionalidade
 O projeto tem uma **base sólida** e está pronto para evoluir para um sistema completo de gestão de salões de beleza! 🚀
 
 
+
+
+

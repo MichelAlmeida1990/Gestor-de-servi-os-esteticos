@@ -131,3 +131,6 @@ Cada usuário (profissional de unhas, salão, etc.) só consegue:
 4. Adicionar validação de CORS mais restritiva em produção
 
 
+
+
+
